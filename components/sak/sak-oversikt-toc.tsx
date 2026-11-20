@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type SakOversiktTocEntry = {
@@ -45,13 +44,12 @@ function useActiveSection(ids: string[]) {
 
 const tocLinkClass = (active: boolean) =>
   cn(
-    'block rounded-lg px-2 py-1.5 text-muted-foreground underline-offset-2 hover:bg-brand/5 hover:text-brand-accent',
+    'flex min-h-11 items-center rounded-lg px-2 py-1.5 text-muted-foreground underline-offset-2 hover:bg-brand/5 hover:text-brand-accent',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card',
     active && 'bg-brand/10 font-semibold text-brand',
   );
 
 export function SakOversiktToc({ entries, variant }: SakOversiktTocProps) {
-  const [open, setOpen] = useState(false);
   const ids = useMemo(() => entries.map((e) => e.id), [entries]);
   const activeId = useActiveSection(ids);
 
@@ -59,32 +57,33 @@ export function SakOversiktToc({ entries, variant }: SakOversiktTocProps) {
 
   if (variant === 'mobile') {
     return (
-      <div className="lg:hidden">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="flex w-full min-h-11 items-center justify-between rounded-xl border border-brand/10 bg-card px-4 py-3 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          aria-expanded={open}
-        >
+      <nav className="lg:hidden" aria-label="Hopp til seksjon">
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Hopp til seksjon
-          <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} aria-hidden />
-        </button>
-        {open ? (
-          <ul className="mt-2 space-y-1 rounded-xl border border-brand/10 bg-card p-3 text-sm">
-            {entries.map((entry) => (
-              <li key={entry.id}>
+        </p>
+        <ul className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
+          {entries.map((entry) => {
+            const active = activeId === entry.id;
+            return (
+              <li key={entry.id} className="shrink-0">
                 <a
                   href={`#${entry.id}`}
-                  className={tocLinkClass(activeId === entry.id)}
-                  onClick={() => setOpen(false)}
+                  aria-current={active ? 'location' : undefined}
+                  className={cn(
+                    'inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium whitespace-nowrap transition-colors',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                    active
+                      ? 'border-brand/30 bg-brand/10 text-brand'
+                      : 'border-border bg-card text-muted-foreground hover:border-brand/30 hover:text-brand',
+                  )}
                 >
                   {entry.label}
                 </a>
               </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
+            );
+          })}
+        </ul>
+      </nav>
     );
   }
 

@@ -1,12 +1,11 @@
 import type { StortingetSakDetail } from '@/lib/stortinget';
 import type { SakTreatmentStatus } from '@/lib/sak-status';
 import { getSakTreatmentLabel } from '@/lib/sak-status';
-import {
-  getLastPastVoteEventDate,
-  getNextVoteCloseDate,
-} from '@/lib/sak-voting-window';
 import { findHoringerForSak, isHoringOpen, type StortingetHoring } from '@/lib/stortinget-horinger';
 import { routes } from '@/lib/routes';
+import { formatSakDate } from '@/lib/sak/date-format';
+import { nextPlannedSaksgangDate, saksgangDecisionDate } from '@/lib/sak/saksgang-steps';
+import { deriveSakOutcome, type SakOutcomeKind } from '@/lib/sak/sak-outcome';
 
 export type SakStatusHighlight = {
   statusLabel: string;
@@ -15,17 +14,13 @@ export type SakStatusHighlight = {
   nextStepDateLabel: string | null;
   hearingHref: string | null;
   hearingLinkLabel: string | null;
+  /** Stortingets egen utfallssetning, ellers et utdrag av vedtaket; kun for ferdigbehandlede saker. */
   vedtakExcerpt: string | null;
+  /** Dagen Stortinget behandlet saken (fra saksgangen); kun for ferdigbehandlede saker. */
+  decisionDateLabel: string | null;
+  outcomeKind: SakOutcomeKind;
+  outcomeLabel: string | null;
 };
-
-function formatNbDate(date: Date): string {
-  return date.toLocaleDateString('nb-NO', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'Europe/Oslo',
-  });
-}
 
 function pickNextHearingLink(
   sakId: string,
@@ -60,16 +55,17 @@ export function buildSakStatusHighlight(input: {
   const { detail, treatmentStatus, kortvedtak, vedtakstekst } = input;
   const statusLabel = getSakTreatmentLabel(treatmentStatus);
 
-  const lastVote = detail ? getLastPastVoteEventDate(detail) : null;
-  const nextVote = detail ? getNextVoteCloseDate(detail) : null;
+  const decisionDate =
+    treatmentStatus === 'closed' ? saksgangDecisionDate(detail?.saksgang?.saksgang_steg_liste) : null;
+  const nextVote = nextPlannedSaksgangDate(detail?.saksgang?.saksgang_steg_liste);
 
   let nextStepLabel: string | null = null;
   let nextStepDateLabel: string | null = null;
 
   if (treatmentStatus === 'pending') {
-    if (nextVote && nextVote.getTime() > Date.now()) {
+    if (nextVote) {
       nextStepLabel = 'Planlagt behandling';
-      nextStepDateLabel = formatNbDate(nextVote);
+      nextStepDateLabel = formatSakDate(nextVote);
     }
   }
 
@@ -77,9 +73,10 @@ export function buildSakStatusHighlight(input: {
     ? pickNextHearingLink(input.sakId, input.linkedHearings)
     : null;
 
+  const outcome = deriveSakOutcome({ status: treatmentStatus, kortvedtak, vedtakstekst });
   const vedtakExcerpt =
     treatmentStatus === 'closed'
-      ? (kortvedtak?.trim() || vedtakstekst?.trim()?.slice(0, 280) || null)
+      ? (outcome.sentence ?? (kortvedtak?.trim() || vedtakstekst?.trim()?.slice(0, 280) || null))
       : null;
 
   return {
@@ -90,5 +87,8 @@ export function buildSakStatusHighlight(input: {
     hearingHref: hearingLink?.href ?? null,
     hearingLinkLabel: hearingLink?.label ?? null,
     vedtakExcerpt,
+    decisionDateLabel: decisionDate ? formatSakDate(decisionDate) : null,
+    outcomeKind: outcome.kind,
+    outcomeLabel: outcome.label,
   };
 }

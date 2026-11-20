@@ -5,23 +5,17 @@ import { getSakEventTooltip, getSakStepTooltip, SAK_META_TOOLTIPS } from '@/lib/
 import { useSakTooltipsEnabled } from '@/components/theme-provider';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { resolveCurrentSaksgangStepIndex } from '@/lib/sak/saksgang-current-step';
+import type { SaksgangStep } from '@/lib/sak/saksgang-steps';
 import { cn } from '@/lib/utils';
 
-export type SaksgangEvent = {
-  id?: string;
-  label: string | null;
-  date: string | null;
-};
-
-export type SaksgangStep = {
-  navn: string;
-  events: SaksgangEvent[];
-};
+export type { SaksgangEvent, SaksgangStep } from '@/lib/sak/saksgang-steps';
 
 type SaksgangTimelineProps = {
   saksgangName?: string | null;
   steps: SaksgangStep[];
   ferdigbehandlet?: boolean;
+  /** Uten eget kort og overskrift, til bruk inne i en foldeseksjon som allerede har tittel. */
+  embedded?: boolean;
 };
 
 function cleanSaksgangName(name: string): string {
@@ -47,24 +41,30 @@ function EventLabel({
   );
 }
 
-export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: SaksgangTimelineProps) {
+export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet, embedded }: SaksgangTimelineProps) {
   const showTooltips = useSakTooltipsEnabled();
 
   if (steps.length === 0) return null;
 
   const currentIndex = resolveCurrentSaksgangStepIndex(steps, Boolean(ferdigbehandlet));
+  const lastReachedIndex = steps.reduce(
+    (last, step, i) => (step.events.some((e) => e.label || e.date) ? i : last),
+    -1,
+  );
 
   return (
-    <div className="rounded-2xl border border-brand/12 bg-card p-4 shadow-sm sm:p-6">
-      <div className="mb-2 flex items-center gap-2">
-        <h2 className="flex items-center text-lg font-bold text-foreground">
-          <GitBranch className="mr-2 h-5 w-5 text-brand" aria-hidden />
-          Saksgang
-        </h2>
-        {showTooltips ? (
-          <InfoTooltip label="Saksgang" description={SAK_META_TOOLTIPS.saksgang} side="bottom" />
-        ) : null}
-      </div>
+    <div className={embedded ? undefined : 'rounded-2xl border border-brand/12 bg-card p-4 shadow-sm sm:p-6'}>
+      {embedded ? null : (
+        <div className="mb-2 flex items-center gap-2">
+          <h2 className="flex items-center text-lg font-bold text-foreground">
+            <GitBranch className="mr-2 h-5 w-5 text-brand" aria-hidden />
+            Saksgang
+          </h2>
+          {showTooltips ? (
+            <InfoTooltip label="Saksgang" description={SAK_META_TOOLTIPS.saksgang} side="bottom" />
+          ) : null}
+        </div>
+      )}
       {saksgangName ? (
         <p className="mb-4 text-sm text-muted-foreground">{cleanSaksgangName(saksgangName)}</p>
       ) : null}
@@ -75,6 +75,7 @@ export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: Saksg
           const meaningfulEvents = steg.events.filter((e) => e.label || e.date);
           const stepDone = meaningfulEvents.length > 0;
           const isCurrent = i === currentIndex;
+          const isFinished = Boolean(ferdigbehandlet) && i === lastReachedIndex;
           const stepTooltip = getSakStepTooltip(steg.navn);
 
           return (
@@ -110,6 +111,11 @@ export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: Saksg
                   {isCurrent ? (
                     <span className="rounded-full border border-brand-accent/30 bg-brand-accent-soft px-2 py-0.5 text-xs font-medium text-brand-accent">
                       Nå
+                    </span>
+                  ) : null}
+                  {isFinished ? (
+                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                      Avsluttet
                     </span>
                   ) : null}
                   {showTooltips && stepTooltip ? (

@@ -17,6 +17,10 @@ export function SakStatusCard({
   highlight: SakStatusHighlight;
   className?: string;
 }) {
+  const hasDetails = Boolean(
+    highlight.nextStepLabel || (highlight.hearingHref && highlight.hearingLinkLabel),
+  );
+
   return (
     <section
       className={cn(
@@ -25,48 +29,55 @@ export function SakStatusCard({
       )}
       aria-label="Saksstatus"
     >
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <SakProcessingBadge status={highlight.statusKind} size="sm" />
-        <span className="text-sm font-medium text-foreground">{highlight.statusLabel}</span>
+        {highlight.decisionDateLabel ? (
+          <span className="text-xs text-muted-foreground tabular-nums">
+            Behandlet {highlight.decisionDateLabel}
+          </span>
+        ) : null}
       </div>
 
-      <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-        {highlight.nextStepLabel ? (
-          <div>
-            <dt className="font-medium text-muted-foreground">{highlight.nextStepLabel}</dt>
-            <dd className="mt-0.5 text-foreground tabular-nums">{highlight.nextStepDateLabel}</dd>
-          </div>
-        ) : null}
-        {highlight.hearingHref && highlight.hearingLinkLabel ? (
-          <div>
-            <dt className="font-medium text-muted-foreground">Høring</dt>
-            <dd className="mt-0.5">
-              <Link
-                href={highlight.hearingHref}
-                className={cn(
-                  'inline-flex min-h-11 items-center font-medium text-brand underline-offset-2 hover:underline',
-                  linkFocus,
-                )}
-              >
-                {highlight.hearingLinkLabel}
-              </Link>
-            </dd>
-          </div>
-        ) : null}
-        {highlight.vedtakExcerpt ? (
-          <div className="sm:col-span-2">
-            <dt className="font-medium text-muted-foreground">Vedtak</dt>
-            <dd className="mt-1 leading-relaxed text-foreground">{highlight.vedtakExcerpt}</dd>
-          </div>
-        ) : null}
-      </dl>
+      {highlight.vedtakExcerpt ? (
+        <p className="mt-2 text-sm leading-relaxed font-medium text-foreground sm:text-base">
+          <span className="sr-only">Vedtak: </span>
+          {highlight.vedtakExcerpt}
+        </p>
+      ) : null}
+
+      {hasDetails ? (
+        <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+          {highlight.nextStepLabel ? (
+            <div>
+              <dt className="font-medium text-muted-foreground">{highlight.nextStepLabel}</dt>
+              <dd className="mt-0.5 text-foreground tabular-nums">{highlight.nextStepDateLabel}</dd>
+            </div>
+          ) : null}
+          {highlight.hearingHref && highlight.hearingLinkLabel ? (
+            <div>
+              <dt className="font-medium text-muted-foreground">Høring</dt>
+              <dd className="mt-0.5">
+                <Link
+                  href={highlight.hearingHref}
+                  className={cn(
+                    'inline-flex min-h-11 items-center font-medium text-brand underline-offset-2 hover:underline',
+                    linkFocus,
+                  )}
+                >
+                  {highlight.hearingLinkLabel}
+                </Link>
+              </dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
 
       <a
         href={getStortingetSakUrl(sakId)}
         target="_blank"
         rel="noopener noreferrer"
         className={cn(
-          'mt-4 inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground underline-offset-2 hover:text-brand hover:underline',
+          'mt-2 inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground underline-offset-2 hover:text-brand hover:underline',
           linkFocus,
         )}
       >

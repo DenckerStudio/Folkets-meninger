@@ -5,6 +5,7 @@ import type { AiSummary } from '@/lib/ai-summary/types';
 import { isAiSummaryV2 } from '@/lib/ai-summary/types';
 import { sakSummaryReadyFromStored } from '@/lib/ai-summary/sak-summary-fetch';
 import { isDisplayableAiSummaryKostnad } from '@/lib/ai-summary/display-kostnad';
+import { cleanForslagForDisplay } from '@/lib/ai-summary/forslag';
 
 function FactBlock({
   icon: Icon,
@@ -62,6 +63,7 @@ export function SakKortFortalt({
       ? ready.narrative.trim()
       : ready.hva.trim()
     : '';
+  const forslag = ready && isAiSummaryV2(ready) ? cleanForslagForDisplay(ready.forslag) : [];
 
   return (
     <section
@@ -73,13 +75,13 @@ export function SakKortFortalt({
         <p className="mt-3 text-base leading-relaxed text-pretty text-foreground">{narrative}</p>
       ) : null}
 
-      {ready && isAiSummaryV2(ready) && ready.forslag.length > 0 ? (
+      {forslag.length > 0 ? (
         <section className="mt-4 min-w-0 rounded-xl border border-border bg-background/60 p-4">
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Forslaget
           </h3>
           <ol className="list-decimal space-y-1.5 pl-5 text-sm leading-relaxed text-foreground">
-            {ready.forslag.map((item, index) => (
+            {forslag.map((item, index) => (
               <li key={`${index}-${item.slice(0, 40)}`} className="break-words pl-1">
                 {item}
               </li>

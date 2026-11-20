@@ -5,8 +5,16 @@ import { buildPageMetadata, truncateDescription } from '@/lib/seo/metadata';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { SakMetaCard, SakSectionHeading, SakStatusBadge } from '@/components/sak/sak-meta';
 import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS, SAK_TYPE_BADGE_CLASS } from '@/lib/sak-status';
-import { formatStortingetDate } from '@/lib/stortinget-horinger';
-import { SaksgangTimeline, type SaksgangStep } from '@/components/sak/saksgang-timeline';
+import { SaksgangTimeline } from '@/components/sak/saksgang-timeline';
+import { SaksgangDisclosure, SAK_OVERSIKT_SAKSGANG_ANCHOR_ID } from '@/components/sak/saksgang-disclosure';
+import {
+  buildSaksgangSteps,
+  latestPastSaksgangEventDate,
+  resolveSakLastUpdatedDate,
+} from '@/lib/sak/saksgang-steps';
+import { formatSakDate, formatSakDateFromRaw } from '@/lib/sak/date-format';
+import { sakDocumentDisplayTitle } from '@/lib/sak/documents-filter';
+import { komiteNameFromDetail } from '@/lib/sak/similar-issues-labels';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ExternalLink, Tag } from 'lucide-react';
@@ -56,44 +64,6 @@ import Image from 'next/image';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
 export const dynamic = 'force-dynamic';
 
-function formatEventDate(dateStr: string | null): string | null {
-  if (!dateStr || dateStr.startsWith('01.01.0001')) return null;
-  const match = dateStr.match(/\/Date\((\d+)[+-]\d+\)\//);
-  if (match && match[1]) {
-    const d = new Date(parseInt(match[1], 10));
-    return d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Oslo' });
-  }
-  const parts = dateStr.split(' ')[0];
-  if (/^\d{2}\.\d{2}\.\d{4}$/.test(parts)) {
-    const [day, month, year] = parts.split('.');
-    const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    if (!isNaN(d.getTime())) {
-      return d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Oslo' });
-    }
-  }
-  return dateStr;
-}
-
-const eventLabels: Record<string, string> = {
-  FRADEP: 'Fra departementet',
-  FRAREP: 'Fra representant',
-  SAK: 'Sak opprettet',
-  FREMMET: 'Fremmet',
-  REFS: 'Referert i Stortinget',
-  SENDT: 'Sendt til komité',
-  KOMITE: 'Til komitébehandling',
-  HOERFRIST: 'Høringsfrist',
-  HOER: 'Høring',
-  ORDFORER: 'Saksordfører oppnevnt',
-  INNST: 'Innstilling avgitt',
-  BEHS: 'Behandlet i Stortinget',
-  PLBEHS: 'Planlagt behandling',
-  VOT: 'Votering',
-  VEDTAK: 'Vedtak',
-  DEBATT: 'Debatt',
-  LOV: 'Lov vedtatt',
-};
-
 const sakTypeMap: Record<number, string> = {
   0: 'Alminnelig sak',
   1: 'Lovsak',
@@ -102,30 +72,6 @@ const sakTypeMap: Record<number, string> = {
   4: 'Interpellasjon',
   5: 'Spørsmål',
 };
-
-function buildSaksgangSteps(
-  saksgangSteg: NonNullable<StortingetSakDetail['saksgang']>['saksgang_steg_liste'],
-): SaksgangStep[] {
-  return (saksgangSteg ?? []).map((steg) => {
-    const allEvents = steg.saksgang_hendelse_liste || [];
-    const events = allEvents
-      .filter((h) => {
-        const hasValidDate = h.dato && !h.dato.startsWith('01.01.0001');
-        return hasValidDate || h.hendelse_tekst;
-      })
-      .map((h) => ({
-        id: h.id,
-        label: h.hendelse_tekst || eventLabels[h.id ?? ''] || null,
-        date: formatEventDate(h.dato ?? null),
-      }))
-      .filter((e) => e.label || e.date);
-
-    return {
-      navn: steg.navn,
-      events,
-    };
-  });
-}
 
 function sakShareDescription(
   sak: { summary?: string | null },
@@ -271,9 +217,13 @@ export default async function SakPage({
 
   const treatmentStatus = sak.status;
 
-  const lastUpdatedLabel =
-    formatStortingetDate(sak.date) ??
-    (issueMeta?.lastUpdatedAt ? formatStortingetDate(issueMeta.lastUpdatedAt) : null);
+  const lastUpdatedLabel = formatSakDateFromRaw(
+    resolveSakLastUpdatedDate({
+      sakDate: sak.date,
+      cachedLastUpdatedAt: issueMeta?.lastUpdatedAt,
+      saksgangSteg: saksgang?.saksgang_steg_liste,
+    }),
+  );
 
   const statusHighlight =
     !isDedicatedResearchSak
@@ -287,8 +237,27 @@ export default async function SakPage({
         })
       : null;
 
+  const isFerdigbehandlet = treatmentStatus === 'closed';
+  const showSaksgangInOverview = isFerdigbehandlet && saksgangSteps.length > 0;
+  const saksgangFinishedDateLabel =
+    statusHighlight?.decisionDateLabel ??
+    (() => {
+      const latest = latestPastSaksgangEventDate(saksgang?.saksgang_steg_liste);
+      return latest ? formatSakDate(latest) : null;
+    })();
+
+  const similarCurrent = {
+    komite: komiteNameFromDetail(komite),
+    emner: emner.flatMap((emne: { navn?: string } | string) => {
+      const name = typeof emne === 'string' ? emne : emne?.navn;
+      return name?.trim() ? [name.trim()] : [];
+    }),
+    sakKind: displaySakKind,
+  };
+
   const oversiktToc: SakOversiktTocEntry[] = [
     { id: 'sak-oversikt-metadata', label: 'Nøkkelinfo' },
+    ...(showSaksgangInOverview ? [{ id: SAK_OVERSIKT_SAKSGANG_ANCHOR_ID, label: 'Saksgang' }] : []),
     ...(innstillingstekst ? [{ id: 'sak-oversikt-innstilling', label: 'Innstilling' }] : []),
     ...(forslagstillere.length > 0 ? [{ id: 'sak-oversikt-forslagstillere', label: 'Forslagstillere' }] : []),
     ...(saksordfoerere.length > 0 ? [{ id: 'sak-oversikt-ordforer', label: 'Saksordførere' }] : []),
@@ -359,12 +328,16 @@ export default async function SakPage({
               {descriptionToShow}
             </p>
           ) : null}
+          {!isDedicatedResearchSak && statusHighlight ? (
+            <SakStatusCard sakId={sak.id} highlight={statusHighlight} />
+          ) : null}
           {!isDedicatedResearchSak ? (
             <>
               <SakKortFortalt summary={storedSummary} />
               <AiSummary
                 sakId={sak.id}
                 initialSummary={storedSummary}
+                leadShownAbove={publicSakSummaryLead(storedSummary)}
                 stortingetPageUrl={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`}
               />
             </>
@@ -381,18 +354,9 @@ export default async function SakPage({
         </FadeIn>
       ) : null}
 
-      {!isDedicatedResearchSak && statusHighlight ? (
+      {!isDedicatedResearchSak && !isFerdigbehandlet && saksgangSteps.length > 0 ? (
         <FadeIn delay={0.28} direction="up">
-          <div className="space-y-4">
-            <SakStatusCard sakId={sak.id} highlight={statusHighlight} />
-            {saksgangSteps.length > 0 ? (
-              <SaksgangTimeline
-                saksgangName={saksgang?.navn}
-                steps={saksgangSteps}
-                ferdigbehandlet={treatmentStatus === 'closed'}
-              />
-            ) : null}
-          </div>
+          <SaksgangTimeline saksgangName={saksgang?.navn} steps={saksgangSteps} />
         </FadeIn>
       ) : null}
 
@@ -402,7 +366,7 @@ export default async function SakPage({
             sakId={sak.id}
             title={officialTitle}
             summary={descriptionToShow || publicSakSummaryLead(storedSummary) || null}
-            documents={documents}
+            documents={documents.map((doc) => ({ id: doc.id, title: sakDocumentDisplayTitle(doc.title) }))}
             innstillingstekst={innstillingstekst}
           />
         </FadeIn>
@@ -436,8 +400,16 @@ export default async function SakPage({
               </div>
             ) : null}
 
+            {showSaksgangInOverview ? (
+              <SaksgangDisclosure
+                saksgangName={saksgang?.navn}
+                steps={saksgangSteps}
+                finishedDateLabel={saksgangFinishedDateLabel}
+              />
+            ) : null}
+
             {!isDedicatedResearchSak && documents.length > 0 ? (
-              <SakDocumentsShortlist sakId={sak.id} documents={documents} />
+              <SakDocumentsShortlist sakId={sak.id} documentCount={documents.length} />
             ) : null}
 
             {innstillingstekst ? (
@@ -618,6 +590,7 @@ export default async function SakPage({
               {!isDedicatedResearchSak ? (
                 <SimilarIssuesSection
                   sakId={sak.id}
+                  current={similarCurrent}
                   excludeIssueIds={relaterteSaker.flatMap((rel: { relatert_sak?: { id?: unknown } }) => {
                     const id = rel.relatert_sak?.id;
                     return id != null ? [String(id)] : [];

@@ -7,11 +7,19 @@ import {
   type SimilarSakListItem,
 } from '@/lib/sak/similar-issues';
 import { dedupeSimilarSaker } from '@/lib/sak/similar-issues-dedupe';
+import { buildSimilarSakReasons, type SimilarSakFacets } from '@/lib/sak/similar-issues-labels';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
-function SimilarSakRow({ item }: { item: SimilarSakListItem }) {
+function SimilarSakRow({
+  item,
+  current,
+}: {
+  item: SimilarSakListItem;
+  current: SimilarSakFacets | null;
+}) {
   const meta = [item.sesjon, item.statusLabel].filter(Boolean).join(' · ');
+  const reasons = buildSimilarSakReasons(current, item.facets);
 
   return (
     <Link
@@ -22,7 +30,10 @@ function SimilarSakRow({ item }: { item: SimilarSakListItem }) {
         <div className="break-words text-sm font-medium text-foreground [overflow-wrap:anywhere] group-hover:text-brand">
           {item.title}
         </div>
-        {meta ? <div className="mt-1 text-xs text-muted-foreground">{meta}</div> : null}
+        {meta ? <div className="mt-1 text-xs font-medium text-foreground/80">{meta}</div> : null}
+        {reasons.length > 0 ? (
+          <div className="mt-0.5 text-xs text-muted-foreground">{reasons.join(' · ')}</div>
+        ) : null}
       </div>
       <ArrowRight
         className={cn('mt-0.5 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-brand')}
@@ -32,12 +43,35 @@ function SimilarSakRow({ item }: { item: SimilarSakListItem }) {
   );
 }
 
+export function SimilarSakList({
+  items,
+  current = null,
+}: {
+  items: readonly SimilarSakListItem[];
+  current?: SimilarSakFacets | null;
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
+      <SakSectionHeading title="Liknende saker" icon="file-text" iconClassName="w-5 h-5 text-brand" />
+      <ul className="mt-4 space-y-2">
+        {items.map((item) => (
+          <li key={item.id}>
+            <SimilarSakRow item={item} current={current} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export async function SimilarIssuesSection({
   sakId,
   excludeIssueIds = [],
+  current = null,
 }: {
   sakId: string;
   excludeIssueIds?: readonly string[];
+  current?: SimilarSakFacets | null;
 }) {
   let items: SimilarSakListItem[] = [];
   try {
@@ -51,16 +85,5 @@ export async function SimilarIssuesSection({
     return null;
   }
 
-  return (
-    <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
-      <SakSectionHeading title="Liknende saker" icon="file-text" iconClassName="w-5 h-5 text-brand" />
-      <ul className="mt-4 space-y-2">
-        {items.map((item) => (
-          <li key={item.id}>
-            <SimilarSakRow item={item} />
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
+  return <SimilarSakList items={items} current={current} />;
 }
