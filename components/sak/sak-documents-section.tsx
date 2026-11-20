@@ -6,6 +6,7 @@ import { Dialog } from '@/components/ui/dialog';
 import {
   SAK_DOCUMENT_FILTER_ALL,
   filterAndSearchSakDocuments,
+  sakDocumentDisplayTitle,
   type SakDocumentFilterValue,
 } from '@/lib/sak/documents-filter';
 import { sakDocumentListAnchorId } from '@/lib/sak/anchors';
@@ -123,7 +124,7 @@ function SakDocumentViewer({
     <Dialog
       open
       onClose={onClose}
-      title={document.title}
+      title={sakDocumentDisplayTitle(document.title)}
       description={SAK_DOCUMENT_KIND_LABELS[document.kind]}
       size="xl"
       footer={
@@ -177,7 +178,7 @@ function SakDocumentViewer({
               className="inline-flex items-center gap-1.5 font-medium text-brand hover:text-brand/80"
             >
               <ExternalLink className="h-4 w-4" aria-hidden />
-              Åpne {content.title}
+              Åpne {sakDocumentDisplayTitle(content.title)}
             </a>
           ) : (
             <p className="text-muted-foreground">Ingen direkte lenke tilgjengelig.</p>
@@ -205,7 +206,7 @@ function SakDocumentViewer({
       {!loading && content?.status === 'ready' ? (
         <div className="overflow-hidden rounded-xl border border-border bg-card">
           <iframe
-            title={content.title}
+            title={sakDocumentDisplayTitle(content.title)}
             srcDoc={content.html}
             className="h-[min(50dvh,560px)] w-full max-w-full bg-white"
             sandbox="allow-same-origin"
@@ -355,7 +356,7 @@ export function SakDocumentsSection({
                       onClick={() => setActiveDocument(doc)}
                       className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-left transition-colors hover:border-brand/40 hover:bg-brand/5"
                     >
-                      <span className="min-w-0 text-sm font-medium break-words text-foreground">{doc.title}</span>
+                      <span className="min-w-0 text-sm font-medium break-words text-foreground">{sakDocumentDisplayTitle(doc.title)}</span>
                       <span className="shrink-0 text-xs text-muted-foreground">
                         {doc.ingestStatus === 'pending' && hasPending && pendingTimedOut
                           ? 'Se dokument'
