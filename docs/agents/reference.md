@@ -156,6 +156,11 @@ All on **Coolify, server `klever`**:
   secret **kun** `CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET`). CMS trenger `FM_WEB_URL` (ingen fallback).
   fm-cms pinnes manuelt i Coolify — ekspert må oppdatere pin og env ved deploy.
   Blogg redigeres i Payload (`CMS_URL`/admin), ikke i fm-web admin-hub.
+- **«Om Folkets Meninger»-utkast**: kategorien `om-folkets-meninger` fylles fra
+  `/dashboard/admin/blogg` (`POST /api/admin/blog/about-draft`, `lib/blog/about-draft.ts`).
+  Admin oppgir tittel og valgfri vinkling; `ANSWER_LLM` skriver brødtekst ut fra forsideteksten i
+  `lib/landing/om-content.ts`, og `createBlogDraft` lagrer et Payload-utkast med
+  `source_event: about:<uuid>`. Redaktør publiserer i Payload. Øvrige generatorer bruker `forklart`.
 - **Blog ISR / build**: runtime CMS failures on `/blogg` throw so ISR keeps the last good HTML.
   During `next build`, if CMS is down, blog index routes render «midlertidig utilgjengelig» via
   `BlogCmsUnavailableShell` (`unstable_noStore`) og **`/blogg` forblir dynamisk (ƒ) for den
