@@ -81,6 +81,7 @@ function testPrompt() {
   assert.match(prompt, /Ikke bruk «Folkets Stemme» eller folkets-stemme\.no\./);
   assert.match(prompt, /Ikke finn opp tall/);
   assert.match(prompt, /bare valgene Ja, Nei og Blank/);
+  assert.match(prompt, /Ikke ta med lenker eller nettadresser\./);
   for (const fact of aboutBlogProductFacts()) {
     assert.ok(prompt.includes(fact), `prompt mangler fakta: ${fact.slice(0, 40)}`);
   }
@@ -215,6 +216,15 @@ async function testBuildDraftInput() {
   assert.equal(repeatedTitle.ok, true);
   if (repeatedTitle.ok) {
     assert.equal(repeatedTitle.input.body_md, 'Ingress.\n\n## Blank\n\nBlank teller med.');
+  }
+
+  const inventedLink = await buildAboutBlogDraftInput({
+    ...base,
+    fetchImpl: llmFetch('Gå til [Folkets Meninger](https://eksempel.invalid/) og finn en sak.'),
+  });
+  assert.equal(inventedLink.ok, true);
+  if (inventedLink.ok) {
+    assert.equal(inventedLink.input.body_md, 'Gå til Folkets Meninger og finn en sak.');
   }
 
   const ownHeading = await buildAboutBlogDraftInput({

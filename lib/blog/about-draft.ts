@@ -81,6 +81,7 @@ Regler:
 - Avstemninger har bare valgene Ja, Nei og Blank.
 - Skriv saklig og konkret i vi-form, uten reklamespråk. Omtrent 300–450 ord.
 - Bruk markdown med ##-overskrifter der det passer. Ikke gjenta tittelen, ikke bruk #-overskrift, og ta ikke med kildeliste eller fotnoter.
+- Ikke ta med lenker eller nettadresser.
 
 Svar kun med brødtekst i markdown.`;
 }
@@ -146,6 +147,8 @@ export function aboutBlogSlug(title: string, uniqueSuffixFrom?: string | null): 
 }
 
 const LEADING_HEADING = /^(#{1,6})\s+([^\n]*)\n+/;
+/** The facts carry no URLs, so any link target is the model's invention; keep the label only. */
+const MARKDOWN_LINK = /!?\[([^\]\n]*)\]\([^)\n]*\)/g;
 
 function comparableHeading(text: string): string {
   return text.replace(/[*_`]/g, '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('nb');
@@ -158,7 +161,8 @@ function cleanAboutBody(raw: string, title: string): string {
   const repeatsTitle =
     leading !== null &&
     (leading[1].length === 1 || comparableHeading(leading[2]) === comparableHeading(title));
-  return sanitizeBlogDraftBodyMarkdown(repeatsTitle ? trimmed.slice(leading[0].length) : trimmed);
+  const body = repeatsTitle ? trimmed.slice(leading[0].length) : trimmed;
+  return sanitizeBlogDraftBodyMarkdown(body.replace(MARKDOWN_LINK, '$1'));
 }
 
 const ABOUT_EXCERPT_MIN_SENTENCE = 80;
