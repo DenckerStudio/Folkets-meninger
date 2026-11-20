@@ -6,14 +6,19 @@ import { motion } from 'motion/react';
 import { routes } from '@/lib/routes';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { LandingMeshBackground } from '@/components/landing-mesh-background';
-import { STANCE_AGGREGATE_DISCLOSURE } from '@/lib/copy/stance-privacy';
-import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
+import { HighlightPhrase } from '@/components/ui/highlight-phrase';
+import {
+  LANDING_HERO_CARD_COPY,
+  LANDING_HERO_H1_KEYWORD,
+  LANDING_HERO_H1_LINE_1,
+  LANDING_HERO_H1_LINE_2,
+  LANDING_HERO_PRIMARY_CTA,
+  LANDING_HERO_SUBHEAD,
+} from '@/lib/landing/homepage-copy';
 import type { LandingOpenPollsSnapshot } from '@/lib/landing/home-data';
 import { formatNumber } from '@/lib/utils';
 
-/** Short pitch in the hero info card — keep in sync with product positioning. */
-export const LANDING_HERO_CARD_COPY =
-  `Følg sakene Stortinget stemmer over. Si hva du mener på konkrete forslag. ${STANCE_AGGREGATE_DISCLOSURE}`;
+export { LANDING_HERO_CARD_COPY };
 
 export type HeroSectionClientProps = {
   pollsSnapshot: LandingOpenPollsSnapshot | null;
@@ -85,10 +90,14 @@ export function HeroSectionClient({ pollsSnapshot }: HeroSectionClientProps) {
           transition={{ duration: 0.8, delay: 0.25, ease: 'easeOut' }}
           className="text-4xl tracking-tight font-extrabold text-[#001433] sm:text-6xl md:text-7xl mb-6 drop-shadow-[0_1px_0_rgba(255,255,255,0.85)]"
         >
-          <span className="block mb-2">Følg Stortinget.</span>
-          <span className="block bg-gradient-to-r from-[#ba0c2f] via-[#001433] to-[#00205b] bg-clip-text text-transparent">
-            Stem mellom valgene.
-          </span>
+          <span className="block mb-2">{LANDING_HERO_H1_LINE_1}</span>
+          <HighlightPhrase
+            text={LANDING_HERO_H1_LINE_2}
+            highlight={LANDING_HERO_H1_KEYWORD}
+            variant="shiny"
+            as="span"
+            className="block"
+          />
         </motion.h1>
 
         <motion.p
@@ -97,8 +106,7 @@ export function HeroSectionClient({ pollsSnapshot }: HeroSectionClientProps) {
           transition={{ duration: 0.75, delay: 0.4, ease: 'easeOut' }}
           className="mt-6 max-w-2xl mx-auto text-lg text-[#001433]/80 sm:text-xl leading-relaxed"
         >
-          Konkrete forslag fra Stortinget, åpne avstemninger med {pollBallotRunningTextPhrase()}, og sammenligning
-          når nok har deltatt — uten at stemmen knyttes til navnet ditt.
+          {LANDING_HERO_SUBHEAD}
         </motion.p>
 
         {pollsSnapshot ? <HeroLiveStats snapshot={pollsSnapshot} /> : null}
@@ -113,7 +121,7 @@ export function HeroSectionClient({ pollsSnapshot }: HeroSectionClientProps) {
             href={routes.login}
             className={`inline-flex min-h-11 w-full sm:w-auto items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold text-white bg-[#ba0c2f] shadow-md transition-colors duration-200 hover:bg-[#00205b] sm:px-7 sm:py-3 sm:text-base ${landingLinkFocusClass}`}
           >
-            Kom i gang gratis
+            {LANDING_HERO_PRIMARY_CTA}
           </Link>
           <Link
             href={routes.utforsk}

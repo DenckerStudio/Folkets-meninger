@@ -10,14 +10,16 @@ import {
   RedditSpikeActiveRowMark,
   RedditSpikeBadgePanel,
 } from '@/components/admin/reddit-spike-badge-panel';
+import { ResearchTopicUseFindingButton } from '@/components/admin/research-topic-use-finding-button';
 import { ResearchViewTabs } from '@/components/admin/research-view-tabs';
+import { ResearchWebhookNotice } from '@/components/admin/research-webhook-notice';
 import { Dialog } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import type { RedditSignalSubreddit } from '@/lib/admin/oppfanget/types';
+import type { ResearchTopicSnapshot } from '@/lib/admin/research/topic-types';
 import {
   REDDIT_SIGNAL_SORT_KEYS,
   REDDIT_SIGNAL_STATUSES,
-  type RedditSignalApiAction,
   type RedditSignalListFilters,
   type RedditSignalListResponse,
   type RedditSignalAdminRow,
@@ -28,7 +30,6 @@ import {
   type RedditSpikeBadgeView,
 } from '@/lib/reddit-signals/spike-badge';
 import {
-  REDDIT_SIGNAL_BLOKKER_CONFIRM,
   REDDIT_SIGNAL_SORT_LABELS,
   REDDIT_SIGNAL_STATUS_LABELS,
 } from '@/lib/reddit-signals/labels';
@@ -135,76 +136,60 @@ function ReasonFields({
 
 function RedditSignalRowActions({
   row,
+  topicSnapshot,
   onUpdated,
 }: {
   row: RedditSignalAdminRow;
+  topicSnapshot?: ResearchTopicSnapshot | null;
   onUpdated: () => void;
 }) {
-  const [pending, setPending] = useState<RedditSignalApiAction | null>(null);
-  const [rowError, setRowError] = useState('');
+  const [pending, setPending] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogError, setDialogError] = useState('');
-  const [activeDialog, setActiveDialog] = useState<null | 'ignorer' | 'blokker'>(null);
   const [reason, setReason] = useState('');
 
   const reasonValid = reason.trim().length >= REASON_MIN_LENGTH;
-  const dialogPending = pending === 'ignorer' || pending === 'blokker';
+  const blocked = row.status === 'blokkert';
 
-  const openDialog = (kind: 'ignorer' | 'blokker') => {
+  const openDialog = () => {
     setReason('');
     setDialogError('');
-    setRowError('');
-    setActiveDialog(kind);
+    setDialogOpen(true);
   };
 
   const closeDialog = () => {
-    if (dialogPending) return;
-    setActiveDialog(null);
+    if (pending) return;
+    setDialogOpen(false);
     setDialogError('');
     setReason('');
   };
 
-  const runAction = useCallback(
-    async (action: RedditSignalApiAction, body: { reason?: string }) => {
-      setPending(action);
-      setDialogError('');
-      setRowError('');
-      try {
-        const res = await fetch(
-          `/api/admin/reddit-signals/${encodeURIComponent(row.id)}/${action}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          },
-        );
-        const json = (await res.json().catch(() => ({}))) as { message?: string };
-        if (!res.ok) {
-          const message = json.message ?? 'Handlingen feilet';
-          if (action === 'marker_brukt') {
-            setRowError(message);
-          } else {
-            setDialogError(message);
-          }
-          return;
-        }
-        setActiveDialog(null);
-        setReason('');
-        onUpdated();
-      } catch {
-        const message = 'Handlingen feilet';
-        if (action === 'marker_brukt') {
-          setRowError(message);
-        } else {
-          setDialogError(message);
-        }
-      } finally {
-        setPending(null);
+  const ignoreSignal = useCallback(async () => {
+    setPending(true);
+    setDialogError('');
+    try {
+      const res = await fetch(
+        `/api/admin/reddit-signals/${encodeURIComponent(row.id)}/ignorer`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason }),
+        },
+      );
+      const json = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) {
+        setDialogError(json.message ?? 'Handlingen feilet');
+        return;
       }
-    },
-    [onUpdated, row.id],
-  );
-
-  const disabled = pending !== null || row.status === 'blokkert';
+      setDialogOpen(false);
+      setReason('');
+      onUpdated();
+    } catch {
+      setDialogError('Handlingen feilet');
+    } finally {
+      setPending(false);
+    }
+  }, [onUpdated, reason, row.id]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -214,46 +199,31 @@ function RedditSignalRowActions({
           «Ny».
         </p>
       )}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-start gap-2">
         <button
           type="button"
-          disabled={disabled}
-          onClick={() => openDialog('ignorer')}
+          disabled={pending || blocked}
+          onClick={openDialog}
           className={cn(actionButtonClass, 'border-border bg-card hover:bg-muted')}
         >
           Ignorer
         </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => openDialog('blokker')}
-          className={cn(
-            actionButtonClass,
-            'border-destructive/40 bg-card text-destructive hover:bg-destructive/10',
-          )}
-        >
-          Blokker permanent
-        </button>
-        <button
-          type="button"
-          disabled={disabled || row.status === 'brukt'}
-          onClick={() => runAction('marker_brukt', {})}
-          className={cn(actionButtonClass, 'border-border bg-card hover:bg-muted')}
-        >
-          {pending === 'marker_brukt' ? (
-            <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" aria-hidden />
-          ) : null}
-          Marker brukt
-        </button>
+        <ResearchTopicUseFindingButton
+          sourceKind="reddit"
+          redditSignalId={row.id}
+          title={row.title}
+          initialSnapshot={topicSnapshot}
+          idleLabel="Bruk"
+          compact
+          disabled={pending || blocked}
+          onStarted={onUpdated}
+          className="w-auto"
+          controlClassName="w-auto"
+        />
       </div>
-      {rowError ? (
-        <p className="text-xs text-destructive" role="alert">
-          {rowError}
-        </p>
-      ) : null}
 
       <Dialog
-        open={activeDialog === 'ignorer'}
+        open={dialogOpen}
         onClose={closeDialog}
         title="Ignorer signal"
         description="Oppgi hvorfor signalet skal ignoreres. Dette logges internt."
@@ -267,7 +237,7 @@ function RedditSignalRowActions({
                 VURDER_FOCUS_RING,
               )}
               onClick={closeDialog}
-              disabled={dialogPending}
+              disabled={pending}
             >
               Avbryt
             </button>
@@ -277,60 +247,13 @@ function RedditSignalRowActions({
                 'inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-foreground disabled:opacity-50',
                 VURDER_FOCUS_RING,
               )}
-              disabled={dialogPending || !reasonValid}
-              onClick={() => runAction('ignorer', { reason })}
+              disabled={pending || !reasonValid}
+              onClick={() => void ignoreSignal()}
             >
-              {dialogPending ? (
+              {pending ? (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden />
               ) : null}
-              {dialogPending ? 'Lagrer…' : 'Lagre'}
-            </button>
-          </div>
-        }
-      >
-        <ReasonFields
-          reason={reason}
-          dialogError={dialogError}
-          reasonValid={reasonValid}
-          onReasonChange={(value) => {
-            setReason(value);
-            if (dialogError) setDialogError('');
-          }}
-        />
-      </Dialog>
-
-      <Dialog
-        open={activeDialog === 'blokker'}
-        onClose={closeDialog}
-        title="Blokker permanent?"
-        description={REDDIT_SIGNAL_BLOKKER_CONFIRM}
-        size="md"
-        footer={
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              className={cn(
-                'inline-flex min-h-11 items-center rounded-lg border border-border px-4 text-sm',
-                VURDER_FOCUS_RING,
-              )}
-              onClick={closeDialog}
-              disabled={dialogPending}
-            >
-              Avbryt
-            </button>
-            <button
-              type="button"
-              className={cn(
-                'inline-flex min-h-11 items-center rounded-lg bg-destructive px-4 text-sm font-medium text-destructive-foreground disabled:opacity-50',
-                VURDER_FOCUS_RING,
-              )}
-              disabled={dialogPending || !reasonValid}
-              onClick={() => runAction('blokker', { reason })}
-            >
-              {dialogPending ? (
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden />
-              ) : null}
-              {dialogPending ? 'Blokkerer…' : 'Blokker permanent'}
+              {pending ? 'Lagrer…' : 'Lagre'}
             </button>
           </div>
         }
@@ -351,10 +274,12 @@ function RedditSignalRowActions({
 
 function RedditSignalRow({
   row,
+  topicSnapshot,
   onUpdated,
   spikeHighlight,
 }: {
   row: RedditSignalAdminRow;
+  topicSnapshot?: ResearchTopicSnapshot | null;
   onUpdated: () => void;
   spikeHighlight: boolean;
 }) {
@@ -431,7 +356,11 @@ function RedditSignalRow({
       </div>
 
       <div className="mt-4 border-t border-border pt-3">
-        <RedditSignalRowActions row={row} onUpdated={onUpdated} />
+        <RedditSignalRowActions
+          row={row}
+          topicSnapshot={topicSnapshot}
+          onUpdated={onUpdated}
+        />
       </div>
     </article>
   );
@@ -442,16 +371,23 @@ export default function RedditSignalsClient({
   initialFilters,
   devPreview,
   spikeBadge,
+  researchTopicsBySignalId,
+  researchWebhooksConfigured,
+  missingResearchWebhookEnvKeys,
 }: {
   initialData: RedditSignalListResponse;
   initialFilters: RedditSignalListFilters;
   devPreview?: string;
   spikeBadge: RedditSpikeBadgeView | null;
+  researchTopicsBySignalId: Record<string, ResearchTopicSnapshot>;
+  researchWebhooksConfigured: boolean;
+  missingResearchWebhookEnvKeys: string[];
 }) {
   const router = useRouter();
   const [isListPending, startListTransition] = useTransition();
   const [isRefreshing, startRefreshTransition] = useTransition();
   const urlSyncReadyRef = useRef(false);
+  const suppressUrlSyncRef = useRef(false);
 
   const [subreddit, setSubreddit] = useState(initialFilters.subreddit);
   const [topic, setTopic] = useState(initialFilters.topic);
@@ -468,6 +404,7 @@ export default function RedditSignalsClient({
   const [hideRemoved, setHideRemoved] = useState(initialFilters.hideRemoved);
   const [onlySak, setOnlySak] = useState(initialFilters.onlyWithSakLink);
   const [sort, setSort] = useState(initialFilters.sort);
+  const clusterFilter = initialFilters.cluster;
   const debouncedTopic = useDebouncedValue(topic, FILTER_DEBOUNCE_MS);
   const debouncedMinScore = useDebouncedValue(minScore, FILTER_DEBOUNCE_MS);
   const debouncedMinComments = useDebouncedValue(minComments, FILTER_DEBOUNCE_MS);
@@ -494,6 +431,7 @@ export default function RedditSignalsClient({
       onlyWithSakLink: onlySak,
       spikeFocus: initialFilters.spikeFocus,
       sort,
+      cluster: clusterFilter,
     }),
     [
       subreddit,
@@ -506,6 +444,7 @@ export default function RedditSignalsClient({
       onlySak,
       initialFilters.spikeFocus,
       sort,
+      clusterFilter,
     ],
   );
 
@@ -513,6 +452,7 @@ export default function RedditSignalsClient({
   const listPending = isListPending || isRefreshing;
 
   useEffect(() => {
+    if (suppressUrlSyncRef.current) return;
     const path = buildRedditSignalsAdminPath(urlFilters, previewParam);
     if (!urlSyncReadyRef.current) {
       urlSyncReadyRef.current = true;
@@ -527,6 +467,7 @@ export default function RedditSignalsClient({
   }, [urlFilters, previewParam, router]);
 
   const clearFilters = () => {
+    suppressUrlSyncRef.current = true;
     setSubreddit('');
     setTopic('');
     setMinScore('');
@@ -539,6 +480,7 @@ export default function RedditSignalsClient({
     const cleared: RedditSignalListFilters = {
       subreddit: '',
       topic: '',
+      cluster: '',
       minScore: null,
       minComments: null,
       minRelevance: null,
@@ -551,6 +493,9 @@ export default function RedditSignalsClient({
     startListTransition(() => {
       router.replace(buildRedditSignalsAdminPath(cleared, previewParam), { scroll: false });
     });
+    window.setTimeout(() => {
+      suppressUrlSyncRef.current = false;
+    }, FILTER_DEBOUNCE_MS + 50);
   };
 
   const clearSpikeFilter = () => {
@@ -577,7 +522,11 @@ export default function RedditSignalsClient({
         <p className="text-sm text-muted-foreground">
           Interessesignaler til internt arbeid. Tall er ikke offentlige kilder.
         </p>
-        <ResearchViewTabs active="signaler" spikeBadgeActive={spikeBadgeActive} />
+        <ResearchViewTabs
+          active="signaler"
+          spikeBadgeActive={spikeBadgeActive}
+          devPreview={devPreview}
+        />
         <RedditSpikeBadgePanel badge={spikeBadge} />
         {initialFilters.spikeFocus ? (
           <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -591,11 +540,32 @@ export default function RedditSignalsClient({
             </button>
           </div>
         ) : null}
+        {clusterFilter ? (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">
+              Klyngefilter: <span className="font-medium text-foreground">{clusterFilter}</span>
+            </span>
+            <Link
+              href={buildRedditSignalsAdminPath(
+                { ...initialFilters, cluster: '' },
+                previewParam,
+              )}
+              className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:underline"
+            >
+              Fjern klyngefilter
+            </Link>
+          </div>
+        ) : null}
         {initialData.previewFixture ? (
           <p className="text-xs text-amber-700 dark:text-amber-400">
             Forhåndsvisning med fixture-data (kun utvikling).
           </p>
-        ) : null}
+        ) : (
+          <ResearchWebhookNotice
+            configured={researchWebhooksConfigured}
+            missingEnvKeys={missingResearchWebhookEnvKeys}
+          />
+        )}
       </div>
 
       <section className="rounded-xl border border-border bg-card p-4">
@@ -744,6 +714,7 @@ export default function RedditSignalsClient({
             <RedditSignalRow
               key={row.id}
               row={row}
+              topicSnapshot={researchTopicsBySignalId[row.id]}
               onUpdated={refreshList}
               spikeHighlight={rowIsListedInSpikeBadge(row, spikeBadge)}
             />

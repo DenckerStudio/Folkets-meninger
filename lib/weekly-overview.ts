@@ -122,7 +122,7 @@ export function filterHearingsWithInnspillFristWithinDays(
   now = new Date(),
 ): StortingetHoring[] {
   const filtered = hearings.filter((hearing) => {
-    if (!isHoringOpen(hearing)) return false;
+    if (!isHoringOpen(hearing, now)) return false;
     const deadline = getHoringInnspillDeadline(hearing);
     if (!deadline) return false;
     const days = daysUntilOsloCalendarDeadline(deadline, now);

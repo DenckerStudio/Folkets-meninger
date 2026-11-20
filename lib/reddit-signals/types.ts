@@ -70,6 +70,7 @@ export type RedditSignalAdminRow = {
 export type RedditSignalListFilters = {
   subreddit: RedditSignalSubreddit | '';
   topic: string;
+  cluster: string;
   minScore: number | null;
   minComments: number | null;
   minRelevance: number | null;

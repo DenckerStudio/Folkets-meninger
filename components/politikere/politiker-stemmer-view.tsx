@@ -77,10 +77,26 @@ function PollAggregateBars({
 function FolkemeningBelowThreshold({
   pollOpen,
   pollHref,
+  total,
 }: {
   pollOpen: boolean;
   pollHref: string | null;
+  total: number | null;
 }) {
+  if (pollOpen && pollHref && (total ?? 0) >= 5) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Stem for å se fordelingen.{' '}
+        <Link
+          href={pollHref}
+          className="font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-sm"
+        >
+          Gå til avstemningen
+        </Link>
+      </p>
+    );
+  }
+
   if (pollOpen && pollHref) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -165,7 +181,11 @@ function StemRowCard({ row }: { row: PolitikerStemmerRow }) {
                 />
               ) : null}
               {!showPublicPollTotals ? (
-                <FolkemeningBelowThreshold pollOpen={row.pollOpen} pollHref={row.pollHref} />
+                <FolkemeningBelowThreshold
+                  pollOpen={row.pollOpen}
+                  pollHref={row.pollHref}
+                  total={row.pollTotalsPublic?.total ?? null}
+                />
               ) : null}
             </>
           ) : (

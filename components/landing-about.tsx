@@ -4,13 +4,19 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { BookOpen, Cpu, Landmark, Scale, ShieldCheck, Sparkles } from 'lucide-react';
 import { InnspillForm } from '@/components/innspill-form';
-import { LandingSectionContainer } from '@/components/landing-section-container';
 import { LandingHeadingRule } from '@/components/icons/civic';
+import { LandingSectionContainer } from '@/components/landing-section-container';
+import { LandingUserBenefits } from '@/components/landing-user-benefits';
 import { BentoFeatureGrid } from '@/components/ui/bento-feature-grid';
+import { HighlightPhrase } from '@/components/ui/highlight-phrase';
 import { LandingFaqAccordion } from '@/components/ui/landing-faq-accordion';
-import { LandingFactStats } from '@/components/ui/landing-fact-stats';
 import { SoftBlurIn } from '@/components/ui/soft-blur-in';
 import { TextReveal } from '@/components/ui/text-reveal';
+import {
+  LANDING_BENEFITS_EYEBROW,
+  LANDING_BENEFITS_TITLE,
+  LANDING_BENEFITS_TITLE_KEYWORD,
+} from '@/lib/landing/homepage-copy';
 import {
   OM_DATA_SOURCES,
   OM_FAQ,
@@ -18,7 +24,6 @@ import {
   OM_INTRO,
   OM_LINKS,
   OM_PRIVACY_SNIPPET,
-  OM_STAT_FACTS,
   OM_STEMME_PLUS_FEATURES,
   OM_WHY_POINTS,
   STORTINGET_DATA_API,
@@ -34,15 +39,19 @@ function SectionBlock({
   className,
 }: {
   eyebrow: string;
-  title: string;
+  title: ReactNode;
   children: ReactNode;
   className?: string;
 }) {
   return (
     <div className={cn('mt-20 border-t border-[#00205b]/10 pt-16 first:mt-0 first:border-t-0 first:pt-0', className)}>
       <SoftBlurIn>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">{eyebrow}</p>
-        <h3 className="mt-3 text-2xl font-bold tracking-tight text-[#001433] sm:text-3xl">{title}</h3>
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-accent">{eyebrow}</p>
+        {typeof title === 'string' ? (
+          <h3 className="mt-3 text-balance text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{title}</h3>
+        ) : (
+          title
+        )}
         <LandingHeadingRule />
       </SoftBlurIn>
       <SoftBlurIn delay={0.1} className="mt-8">
@@ -69,10 +78,10 @@ export function LandingAbout() {
       <section id="om-oss" className="scroll-mt-28">
         <div className="mx-auto max-w-3xl text-center">
           <SoftBlurIn>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">Om oss</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-accent">Om oss</p>
           </SoftBlurIn>
           <SoftBlurIn delay={0.08}>
-            <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-[#001433] sm:text-4xl md:text-5xl">
+            <h2 className="mt-4 text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl md:text-5xl">
               Om Folkets Meninger
             </h2>
             <LandingHeadingRule className="landing-heading-rule--center" />
@@ -103,8 +112,18 @@ export function LandingAbout() {
           <BentoFeatureGrid tiles={whyTiles} />
         </div>
 
-        <SectionBlock eyebrow="Tall vi står for" title="Åpne terskler, ikke påstander">
-          <LandingFactStats items={OM_STAT_FACTS} />
+        <SectionBlock
+          eyebrow={LANDING_BENEFITS_EYEBROW}
+          title={
+            <HighlightPhrase
+              text={LANDING_BENEFITS_TITLE}
+              highlight={LANDING_BENEFITS_TITLE_KEYWORD}
+              as="h3"
+              className="mt-3 text-balance text-2xl font-bold tracking-tight text-foreground sm:text-3xl md:text-4xl"
+            />
+          }
+        >
+          <LandingUserBenefits />
         </SectionBlock>
 
         <SectionBlock eyebrow="Datakilder" title="Hvor informasjonen kommer fra">
@@ -214,8 +233,8 @@ export function LandingAbout() {
 
         <div id="om-kontakt" className="mt-20 scroll-mt-28 border-t border-[#00205b]/10 pt-16">
           <SoftBlurIn>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">Kontakt</p>
-            <h3 className="mt-3 text-2xl font-bold text-[#001433]">Gi innspill</h3>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-accent">Kontakt</p>
+            <h3 className="mt-3 text-2xl font-bold text-foreground">Gi innspill</h3>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#001433]/70">
               Idé, feil, spørsmål om representativitet eller nøytralitet? Samme skjema som på{' '}
               <Link href={OM_LINKS.innspill} className="font-medium text-[#00205b] hover:underline">

@@ -18,10 +18,10 @@ export function LandingResearchTopics({ topics }: LandingResearchTopicsProps) {
         <section>
           <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-brand-accent">
                 Samfunnsdebatt
               </p>
-              <h2 className="text-3xl font-bold tracking-tight text-[#001433] sm:text-4xl">
+              <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
                 Dette snakkes det om
               </h2>
               <LandingHeadingRule />

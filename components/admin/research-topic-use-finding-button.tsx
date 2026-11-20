@@ -32,6 +32,10 @@ export function ResearchTopicUseFindingButton({
   initialSnapshot,
   className,
   compact,
+  idleLabel = 'Bruk funn',
+  onStarted,
+  disabled = false,
+  controlClassName,
 }: {
   sourceKind: ResearchTopicSourceKind;
   clusterId?: string;
@@ -40,6 +44,10 @@ export function ResearchTopicUseFindingButton({
   initialSnapshot?: ResearchTopicSnapshot | null;
   className?: string;
   compact?: boolean;
+  idleLabel?: string;
+  onStarted?: () => void;
+  disabled?: boolean;
+  controlClassName?: string;
 }) {
   const [snapshot, setSnapshot] = useState<ResearchTopicSnapshot | null>(initialSnapshot ?? null);
   const [pending, setPending] = useState(false);
@@ -142,13 +150,20 @@ export function ResearchTopicUseFindingButton({
             updatedAt: new Date().toISOString(),
           });
         }
+        onStarted?.();
       } catch {
         setError('Kunne ikke starte tema-brief');
       } finally {
         setPending(false);
       }
     },
-    [clusterId, redditSignalId, sourceKind, title],
+    [clusterId, onStarted, redditSignalId, sourceKind, title],
+  );
+
+  const controlClass = cn(
+    buttonVariants({ variant: 'outline', size: 'sm' }),
+    'min-h-11 w-full max-w-full justify-center gap-1.5 whitespace-normal text-center text-xs font-medium leading-snug focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60',
+    controlClassName,
   );
 
   const showSlowNotice = useMemo(() => {
@@ -162,10 +177,7 @@ export function ResearchTopicUseFindingButton({
       <div className={cn('flex min-w-0 flex-col gap-1', className)}>
         <Link
           href={routes.adminResearchTopic(snapshot.topicId)}
-          className={cn(
-            buttonVariants({ variant: 'outline', size: 'sm' }),
-            'min-h-11 w-full max-w-full justify-center whitespace-normal text-center text-xs font-medium leading-snug focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-          )}
+          className={controlClass}
         >
           Åpne brief
         </Link>
@@ -184,7 +196,7 @@ export function ResearchTopicUseFindingButton({
     );
   }
 
-  let label = 'Bruk funn';
+  let label = idleLabel;
   if (busy) label = 'Lager brief…';
   else if (failedRetryable) label = 'Prøv igjen';
 
@@ -195,11 +207,10 @@ export function ResearchTopicUseFindingButton({
       ) : null}
       <button
         type="button"
-        disabled={busy}
+        disabled={busy || disabled}
         onClick={() => void startRequest(failedRetryable)}
         className={cn(
-          buttonVariants({ variant: 'outline', size: 'sm' }),
-          'min-h-11 w-full max-w-full justify-center gap-1.5 whitespace-normal text-center text-xs font-medium leading-snug focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60',
+          controlClass,
           failedRetryable && !busy && 'border-destructive/40 text-destructive hover:bg-destructive/10',
         )}
       >

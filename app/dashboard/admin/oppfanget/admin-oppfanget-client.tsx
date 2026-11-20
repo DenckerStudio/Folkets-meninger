@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Radar } from 'lucide-react';
 import { AdminBackLink } from '@/components/admin/admin-shell';
 import { ResearchViewTabs } from '@/components/admin/research-view-tabs';
+import { ResearchWebhookNotice } from '@/components/admin/research-webhook-notice';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import {
   OPPFANGET_DISPLAY_STATUS_LABELS,
@@ -108,9 +109,11 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 function OppfangetPageHeader({
   previewMock,
   spikeBadgeActive = false,
+  devPreview,
 }: {
   previewMock?: boolean;
   spikeBadgeActive?: boolean;
+  devPreview?: string;
 }) {
   return (
     <div>
@@ -122,45 +125,17 @@ function OppfangetPageHeader({
         Saker og aksjoner vi har fanget opp, med kilder. Tall og kilder er ikke verifisert her.
       </p>
       <div className="mt-3">
-        <ResearchViewTabs active="oppfanget" spikeBadgeActive={spikeBadgeActive} />
+        <ResearchViewTabs
+          active="oppfanget"
+          spikeBadgeActive={spikeBadgeActive}
+          devPreview={devPreview}
+        />
       </div>
       {previewMock ? (
         <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
           Forhåndsvisning med mock-data (kun utvikling).
         </p>
       ) : null}
-    </div>
-  );
-}
-
-function ResearchWebhookNotice({
-  configured,
-  missingEnvKeys,
-}: {
-  configured: boolean;
-  missingEnvKeys: string[];
-}) {
-  if (configured) return null;
-  const names =
-    missingEnvKeys.length > 0
-      ? missingEnvKeys
-      : ['N8N_RESEARCH_WEBHOOK_BASE', 'N8N_RESEARCH_WEBHOOK_SECRET', 'N8N_RESEARCH_WEBHOOK_TOKEN'];
-  return (
-    <div
-      className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-foreground"
-      role="status"
-    >
-      <p className="font-medium">Research-knapper krever n8n-oppsett</p>
-      <p className="mt-1 text-muted-foreground">
-        Utdyp og blogg starter webhook-arbeidsflyter. Sett{' '}
-        {names.map((key, index) => (
-          <span key={key}>
-            {index > 0 ? (index === names.length - 1 ? ' og ' : ', ') : null}
-            <code className="text-xs">{key}</code>
-          </span>
-        ))}{' '}
-        på fm-web, og aktiver research-utdyp og blogg-fra-research i n8n (ikke dryRun).
-      </p>
     </div>
   );
 }
@@ -318,7 +293,11 @@ export default function AdminOppfangetClient({
   if (tableMissing && data) {
     return (
       <div className="space-y-6" lang="nb-NO">
-        <OppfangetPageHeader previewMock={data.previewMock} spikeBadgeActive={spikeBadgeActive} />
+        <OppfangetPageHeader
+          previewMock={data.previewMock}
+          spikeBadgeActive={spikeBadgeActive}
+          devPreview={devPreview}
+        />
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-foreground">
           <p className="font-medium">Database ikke klar</p>
           <p className="mt-1 text-muted-foreground">{data.tableMissingMessage}</p>
@@ -330,7 +309,11 @@ export default function AdminOppfangetClient({
 
   return (
     <div className="space-y-6" lang="nb-NO">
-      <OppfangetPageHeader previewMock={data?.previewMock} spikeBadgeActive={spikeBadgeActive} />
+      <OppfangetPageHeader
+        previewMock={data?.previewMock}
+        spikeBadgeActive={spikeBadgeActive}
+        devPreview={devPreview}
+      />
       {!mockMode ? (
         <ResearchWebhookNotice
           configured={researchWebhooksConfigured}

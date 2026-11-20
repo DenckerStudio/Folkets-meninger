@@ -33,6 +33,7 @@ import {
 import { routes } from '@/lib/routes';
 import { touchTargetLinkClass } from '@/lib/touch-target';
 import { cn } from '@/lib/utils';
+import { formatPollBallotPercentDisplay } from '@/lib/polls/format';
 
 /**
  * Tool results streamed by `/api/chat`. Kept structural (no class imports) so the
@@ -985,8 +986,8 @@ function PollResultsCard({ output }: { output: PollResultsOutput }) {
         </span>
         {distributionVisible ? (
           <>
-            Ja {percents.ja ?? 0}% ({totals.ja ?? 0}) · Nei {percents.nei ?? 0}% ({totals.nei ?? 0}) ·
-            Blank {percents.blank ?? 0}% ({totals.blank ?? 0})
+            Ja {formatPollBallotPercentDisplay(percents.ja ?? 0)} ({totals.ja ?? 0}) · Nei {formatPollBallotPercentDisplay(percents.nei ?? 0)} ({totals.nei ?? 0}) ·
+            Blank {formatPollBallotPercentDisplay(percents.blank ?? 0)} ({totals.blank ?? 0})
           </>
         ) : null}
       </p>

@@ -14,7 +14,7 @@ import { routes } from '@/lib/routes';
 export const STORTINGET_DATA_API = 'https://data.stortinget.no';
 
 export const OM_INTRO =
-  'Folkets Meninger lar deg følge saker fra Stortinget, si hva du mener, og sammenligne med faktiske voteringer — uten å være en offisiell meningsmåling for hele Norge.';
+  'Folkets Meninger lar deg følge saker fra Stortinget, si din mening, og sammenligne med faktiske voteringer — uten å være en offisiell meningsmåling for hele Norge.';
 
 export const OM_WHY_POINTS = [
   {
@@ -71,29 +71,6 @@ export const OM_DATA_SOURCES = [
     label: 'Offisielle dokumenter',
     href: 'https://www.stortinget.no/no/Saker-og-publikasjoner/',
     note: 'Lenker og dokumentvisning der Stortinget publiserer dem.',
-  },
-] as const;
-
-export const OM_STAT_FACTS = [
-  {
-    label: 'Kilde',
-    value: 'data.stortinget.no',
-    detail: 'Lesing via åpent API — ingen egen «sannhetsmaskin».',
-  },
-  {
-    label: 'Sammenligning',
-    value: `${MIN_PUBLIC_AGGREGATE_N}+ stemmer`,
-    detail: 'Før vi sammenligner folkets stemmer med en Stortinget-votering på sakssiden.',
-  },
-  {
-    label: 'Offentlig statistikk',
-    value: `${MIN_PUBLIC_AGGREGATE_N}+ stemmer`,
-    detail: 'Før saker inkluderes i anonyme aggregater på Innsikt.',
-  },
-  {
-    label: 'Stemme+',
-    value: `${STEMME_PLUS_MONTHLY_PRICE_NOK} kr/mnd`,
-    detail: STEMME_PLUS_NON_INFLUENCE_NOTE,
   },
 ] as const;
 

@@ -75,6 +75,7 @@
     "react-dom": "^19.2.1",
     "react-use-measure": "^2.1.7",
     "recharts": "^3.8.1",
+    "server-only": "^0.0.1",
     "shadcn": "^4.8.2",
     "stripe": "^23.0.0",
     "swiper": "^14.2.0",
