@@ -145,9 +145,20 @@ export function aboutBlogSlug(title: string, uniqueSuffixFrom?: string | null): 
   return suffix ? `${base}-${suffix}` : base;
 }
 
-function cleanAboutBody(raw: string): string {
-  const withoutTitleHeading = raw.trim().replace(/^#\s+[^\n]*\n+/, '');
-  return sanitizeBlogDraftBodyMarkdown(withoutTitleHeading);
+const LEADING_HEADING = /^(#{1,6})\s+([^\n]*)\n+/;
+
+function comparableHeading(text: string): string {
+  return text.replace(/[*_`]/g, '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('nb');
+}
+
+/** The page already renders the title, so a leading H1 or a heading repeating it is dropped. */
+function cleanAboutBody(raw: string, title: string): string {
+  const trimmed = raw.trim();
+  const leading = LEADING_HEADING.exec(trimmed);
+  const repeatsTitle =
+    leading !== null &&
+    (leading[1].length === 1 || comparableHeading(leading[2]) === comparableHeading(title));
+  return sanitizeBlogDraftBodyMarkdown(repeatsTitle ? trimmed.slice(leading[0].length) : trimmed);
 }
 
 const ABOUT_EXCERPT_MIN_SENTENCE = 80;
@@ -212,7 +223,7 @@ export async function buildAboutBlogDraftInput(args: {
       fetchImpl: args.fetchImpl,
       timeoutMs: resolveBlogDraftAnswerLlmTimeoutMs(),
     });
-    body_md = cleanAboutBody(raw);
+    body_md = cleanAboutBody(raw, args.title);
   } catch (error) {
     if (isAnswerLlmTimeoutError(error)) {
       return {

@@ -208,6 +208,22 @@ async function testBuildDraftInput() {
   assert.equal(prompts.length, 1);
   assert.match(prompts[0], /Vinkling fra redaksjonen: Forklar Blank-valget/);
 
+  const repeatedTitle = await buildAboutBlogDraftInput({
+    ...base,
+    fetchImpl: llmFetch('## slik virker  avstemninger\n\nIngress.\n\n## Blank\n\nBlank teller med.'),
+  });
+  assert.equal(repeatedTitle.ok, true);
+  if (repeatedTitle.ok) {
+    assert.equal(repeatedTitle.input.body_md, 'Ingress.\n\n## Blank\n\nBlank teller med.');
+  }
+
+  const ownHeading = await buildAboutBlogDraftInput({
+    ...base,
+    fetchImpl: llmFetch('## Bakgrunn\n\nIngress.'),
+  });
+  assert.equal(ownHeading.ok, true);
+  if (ownHeading.ok) assert.equal(ownHeading.input.body_md, '## Bakgrunn\n\nIngress.');
+
   const forbidden = await buildAboutBlogDraftInput({
     ...base,
     fetchImpl: llmFetch('Du kan snart logge inn med BankID.'),
