@@ -45,6 +45,8 @@ import {
   type SummaryLoadState,
 } from '@/lib/ai-summary/sak-summary-dialog-state';
 import type { AiSummaryLegacy, AiSummaryV2 } from '@/lib/ai-summary/types';
+import { cleanForslagForDisplay } from '@/lib/ai-summary/forslag';
+import { isSummaryLeadAlreadyShown } from '@/lib/ai-summary/lead-dedupe';
 
 type SourceDoc = {
   title: string;
@@ -55,11 +57,14 @@ export default function AiSummary({
   sakId,
   stortingetPageUrl,
   initialSummary = null,
+  leadShownAbove = null,
 }: {
   sakId: string;
   stortingetPageUrl?: string | null;
   /** Row from issue_ai_summaries. Shown whether or not an admin has reviewed it. */
   initialSummary?: StoredAiSummary | null;
+  /** Tekst som allerede vises over (f.eks. «Kort fortalt»); ledeteksten gjentas ikke da. */
+  leadShownAbove?: string | null;
 }) {
   const headingId = useId();
   const showTooltips = useSakTooltipsEnabled();
@@ -254,6 +259,7 @@ export default function AiSummary({
   const showRetry =
     loadState === 'read_failed' || loadState === 'timeout';
   const lead = publicSakSummaryLead(data);
+  const showLead = Boolean(lead) && !isSummaryLeadAlreadyShown(lead, leadShownAbove);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -301,7 +307,7 @@ export default function AiSummary({
         />
       ) : null}
 
-      {lead ? (
+      {showLead ? (
         <p className="basis-full text-base leading-relaxed text-foreground">{lead}</p>
       ) : null}
 
@@ -491,6 +497,7 @@ function FactTile({
 }
 
 function V2Summary({ data }: { data: AiSummaryV2 }) {
+  const forslag = cleanForslagForDisplay(data.forslag);
   return (
     <div className="min-w-0 space-y-4">
       {data.labels.length > 0 ? (
@@ -510,13 +517,13 @@ function V2Summary({ data }: { data: AiSummaryV2 }) {
         <p className="text-base leading-relaxed break-words text-foreground">{data.narrative}</p>
       ) : null}
 
-      {data.forslag.length > 0 ? (
+      {forslag.length > 0 ? (
         <section className="min-w-0 rounded-xl border border-border bg-card p-4">
           <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Forslagene ({data.forslag.length})
+            Forslagene ({forslag.length})
           </h3>
           <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-foreground">
-            {data.forslag.map((item, index) => (
+            {forslag.map((item, index) => (
               <li key={`${index}-${item.slice(0, 48)}`} className="break-words pl-1">
                 {item}
               </li>
