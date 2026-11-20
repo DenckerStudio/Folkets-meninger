@@ -50,30 +50,6 @@ export function filterAndSearchSakDocuments<T extends Pick<SakDocumentRef, 'kind
   return searchSakDocumentsByTitle(filterSakDocumentsByKind(documents, filter), query);
 }
 
-export function pickSakDocumentShortlist<T extends SakDocumentRef>(
-  documents: readonly T[],
-  limit = 4,
-): T[] {
-  if (documents.length <= limit) return [...documents];
-
-  const priority: SakDocumentKind[] = ['innstilling', 'lovforslag', 'representantforslag', 'referat'];
-  const picked: T[] = [];
-  const seen = new Set<string>();
-
-  for (const kind of priority) {
-    for (const doc of documents) {
-      if (doc.kind !== kind || seen.has(doc.id)) continue;
-      picked.push(doc);
-      seen.add(doc.id);
-      if (picked.length >= limit) return picked;
-    }
-  }
-
-  for (const doc of documents) {
-    if (seen.has(doc.id)) continue;
-    picked.push(doc);
-    if (picked.length >= limit) break;
-  }
-
-  return picked;
+export function sakDocumentsLinkLabel(count: number): string {
+  return count === 1 ? 'Se dokumentet på saken' : `Se alle ${count} dokumenter`;
 }

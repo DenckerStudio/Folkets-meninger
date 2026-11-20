@@ -14,6 +14,8 @@ type SaksgangTimelineProps = {
   saksgangName?: string | null;
   steps: SaksgangStep[];
   ferdigbehandlet?: boolean;
+  /** Uten eget kort og overskrift, til bruk inne i en foldeseksjon som allerede har tittel. */
+  embedded?: boolean;
 };
 
 function cleanSaksgangName(name: string): string {
@@ -39,7 +41,7 @@ function EventLabel({
   );
 }
 
-export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: SaksgangTimelineProps) {
+export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet, embedded }: SaksgangTimelineProps) {
   const showTooltips = useSakTooltipsEnabled();
 
   if (steps.length === 0) return null;
@@ -51,16 +53,18 @@ export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: Saksg
   );
 
   return (
-    <div className="rounded-2xl border border-brand/12 bg-card p-4 shadow-sm sm:p-6">
-      <div className="mb-2 flex items-center gap-2">
-        <h2 className="flex items-center text-lg font-bold text-foreground">
-          <GitBranch className="mr-2 h-5 w-5 text-brand" aria-hidden />
-          Saksgang
-        </h2>
-        {showTooltips ? (
-          <InfoTooltip label="Saksgang" description={SAK_META_TOOLTIPS.saksgang} side="bottom" />
-        ) : null}
-      </div>
+    <div className={embedded ? undefined : 'rounded-2xl border border-brand/12 bg-card p-4 shadow-sm sm:p-6'}>
+      {embedded ? null : (
+        <div className="mb-2 flex items-center gap-2">
+          <h2 className="flex items-center text-lg font-bold text-foreground">
+            <GitBranch className="mr-2 h-5 w-5 text-brand" aria-hidden />
+            Saksgang
+          </h2>
+          {showTooltips ? (
+            <InfoTooltip label="Saksgang" description={SAK_META_TOOLTIPS.saksgang} side="bottom" />
+          ) : null}
+        </div>
+      )}
       {saksgangName ? (
         <p className="mb-4 text-sm text-muted-foreground">{cleanSaksgangName(saksgangName)}</p>
       ) : null}
