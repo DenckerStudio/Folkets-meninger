@@ -100,6 +100,7 @@ export function AboutBlogDraftPanel({
   }, [refreshDrafts]);
 
   const trimmedTitle = title.trim();
+  const titleTooShort = trimmedTitle.length > 0 && trimmedTitle.length < titleMin;
   const canSubmit = trimmedTitle.length >= titleMin && llmConfigured && !pending;
 
   const handleSubmit = async (event: FormEvent) => {
@@ -186,7 +187,13 @@ export function AboutBlogDraftPanel({
               disabled={pending}
               placeholder="Hvorfor vi lagde Folkets Meninger"
               className="min-h-11"
+              aria-describedby={titleTooShort ? 'about-blog-title-hint' : undefined}
             />
+            {titleTooShort ? (
+              <p id="about-blog-title-hint" className="text-xs text-muted-foreground">
+                Tittelen må ha minst {titleMin} tegn.
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-1.5">
