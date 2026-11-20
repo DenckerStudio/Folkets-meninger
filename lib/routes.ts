@@ -65,6 +65,7 @@ export const routes = {
   adminResearchTopic: (id: string) =>
     `${DASHBOARD_PREFIX}/admin/research/topics/${encodeURIComponent(id)}`,
   adminVurder: `${DASHBOARD_PREFIX}/admin/vurder`,
+  adminBlogg: `${DASHBOARD_PREFIX}/admin/blogg`,
   adminOppgaver: `${DASHBOARD_PREFIX}/admin/oppgaver`,
   adminKilder: `${DASHBOARD_PREFIX}/admin/kilder`,
   adminEmbeddings: `${DASHBOARD_PREFIX}/admin/embeddings`,
