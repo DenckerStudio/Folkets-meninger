@@ -274,7 +274,7 @@ function faqPhrases(id: string): string[] {
   }
 }
 
-function toSuggestion(seed: {
+export function createAboutSuggestion(seed: {
   key: string;
   title: string;
   angle: string;
@@ -307,7 +307,7 @@ export function buildCoverageSuggestions(written: AboutWrittenPiece[]): AboutSug
     if (written.some((piece) => seed.phrases.some((phrase) => pieceMatchesPhrase(piece, phrase)))) {
       continue;
     }
-    const suggestion = toSuggestion({ ...seed, source: 'dekning', written });
+    const suggestion = createAboutSuggestion({ ...seed, source: 'dekning', written });
     if (!suggestion) continue;
     suggestions.push(suggestion);
     if (suggestions.length >= COVERAGE_LIMIT) break;
@@ -326,7 +326,7 @@ export function buildChangelogSuggestions(
     const reason = entry.published
       ? `Endringsloggen har «${title}», og ingen om-tittel dekker punktet.`
       : `Endringsloggen har et upublisert punkt «${title}», så innlegget bør vente til punktet er klart.`;
-    const suggestion = toSuggestion({
+    const suggestion = createAboutSuggestion({
       key: `endringslogg:${entry.id}`,
       title,
       angle:
@@ -357,7 +357,7 @@ export function buildRoadmapSuggestions(
       item.status === 'done'
         ? 'Punktet er merket ferdig i veikartet. Knytt det til det som allerede står om tjenesten, og ikke finn opp tall eller funksjoner.'
         : `Punktet er merket ${statusLabel} i veikartet. Beskriv bare dagens tjeneste, og ikke lov punktet som en ferdig funksjon.`;
-    const suggestion = toSuggestion({
+    const suggestion = createAboutSuggestion({
       key: `veikart:${item.id}`,
       title,
       angle,
@@ -375,7 +375,7 @@ export function buildRoadmapSuggestions(
 
 export function buildEvergreenAboutSuggestions(written: AboutWrittenPiece[] = []): AboutSuggestion[] {
   const why = OM_WHY_POINTS.map((point) => point.title).join(', ');
-  const seeds: Array<Omit<Parameters<typeof toSuggestion>[0], 'written' | 'source'>> = [
+  const seeds: Array<Omit<Parameters<typeof createAboutSuggestion>[0], 'written' | 'source'>> = [
     {
       key: 'staende:hva-tjenesten-er',
       title: 'Derfor finnes Folkets Meninger',
@@ -401,7 +401,7 @@ export function buildEvergreenAboutSuggestions(written: AboutWrittenPiece[] = []
 
   const suggestions: AboutSuggestion[] = [];
   for (const seed of seeds) {
-    const suggestion = toSuggestion({ ...seed, source: 'staende', written });
+    const suggestion = createAboutSuggestion({ ...seed, source: 'staende', written });
     if (suggestion) suggestions.push(suggestion);
   }
   return suggestions;
