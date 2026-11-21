@@ -434,3 +434,93 @@ export function withEvergreenFallback(
   if (live.length > 0) return live;
   return buildEvergreenAboutSuggestions(written);
 }
+
+export const ABOUT_SUGGESTION_SNOOZE_DAYS = 14;
+
+export const ABOUT_SUGGESTION_STATUSES = ['open', 'used', 'dismissed', 'snoozed'] as const;
+export type AboutSuggestionStatus = (typeof ABOUT_SUGGESTION_STATUSES)[number];
+
+export type AboutSuggestionFeedback = {
+  key: string;
+  title: string;
+  status: AboutSuggestionStatus;
+  snoozeUntil: string | null;
+};
+
+export function suggestionFeedbackIsActive(row: AboutSuggestionFeedback, now: Date): boolean {
+  if (row.status === 'dismissed' || row.status === 'used') return true;
+  if (row.status === 'snoozed') {
+    if (!row.snoozeUntil) return true;
+    const until = Date.parse(row.snoozeUntil);
+    if (Number.isNaN(until)) return true;
+    return until > now.getTime();
+  }
+  if (row.status === 'open') return false;
+  const unhandled: never = row.status;
+  return unhandled;
+}
+
+export function visibleAboutSuggestions(args: {
+  live: AboutSuggestion[];
+  written: AboutWrittenPiece[];
+  feedback: AboutSuggestionFeedback[];
+  now?: Date;
+}): AboutSuggestion[] {
+  const now = args.now ?? new Date();
+  const blockedKeys = new Set(
+    args.feedback.filter((row) => suggestionFeedbackIsActive(row, now)).map((row) => row.key),
+  );
+  const blockedTitles: AboutWrittenPiece[] = args.feedback
+    .filter((row) => row.status === 'dismissed' || row.status === 'used')
+    .map((row) => ({ title: row.title, kind: 'publisert', at: null }));
+
+  const keptLive = args.live.filter(
+    (item) =>
+      item.source !== 'staende' &&
+      !blockedKeys.has(item.key) &&
+      !isAlreadyWritten(item.title, blockedTitles),
+  );
+  return withEvergreenFallback(keptLive, [...args.written, ...blockedTitles]).filter(
+    (item) => !blockedKeys.has(item.key) && !isAlreadyWritten(item.title, blockedTitles),
+  );
+}
+
+export type AboutSuggestionWritePlan = {
+  insert: AboutSuggestion[];
+  update: AboutSuggestion[];
+  deleteKeys: string[];
+};
+
+/** Refresh upserts open rows. Dismissed, used, and active snoozes stay as they are. */
+export function planAboutSuggestionWrites(args: {
+  existing: AboutSuggestionFeedback[];
+  proposed: AboutSuggestion[];
+  now: Date;
+}): AboutSuggestionWritePlan {
+  const blockedTitles: AboutWrittenPiece[] = args.existing
+    .filter((row) => row.status === 'dismissed' || row.status === 'used')
+    .map((row) => ({ title: row.title, kind: 'publisert', at: null }));
+  const existingByKey = new Map(args.existing.map((row) => [row.key, row]));
+  const insert: AboutSuggestion[] = [];
+  const update: AboutSuggestion[] = [];
+  const proposedKeys = new Set<string>();
+
+  for (const item of args.proposed) {
+    proposedKeys.add(item.key);
+    if (isAlreadyWritten(item.title, blockedTitles)) continue;
+    const current = existingByKey.get(item.key);
+    if (!current) {
+      insert.push(item);
+      continue;
+    }
+    if (current.status === 'dismissed' || current.status === 'used') continue;
+    if (suggestionFeedbackIsActive(current, args.now)) continue;
+    update.push(item);
+  }
+
+  const deleteKeys = args.existing
+    .filter((row) => row.status === 'open' && !proposedKeys.has(row.key))
+    .map((row) => row.key);
+
+  return { insert, update, deleteKeys };
+}

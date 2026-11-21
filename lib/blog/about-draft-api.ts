@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { requireAdmin } from '@/lib/admin/gate';
+import { setAboutSuggestionStatus } from '@/lib/blog/about-suggestions-store';
 import {
   aboutBlogSlug,
   aboutBlogSourceEvent,
@@ -26,6 +27,12 @@ export type AboutDraftApiDeps = {
   buildDraftInput: typeof buildAboutBlogDraftInput;
   createDraft: typeof createBlogDraft;
   newRequestId: () => string;
+  linkSuggestionDraft: (args: {
+    key: string;
+    requestId: string;
+    sourceEvent: string;
+    userId: string;
+  }) => Promise<void>;
 };
 
 export const aboutDraftApiDeps: AboutDraftApiDeps = {
@@ -36,6 +43,18 @@ export const aboutDraftApiDeps: AboutDraftApiDeps = {
   buildDraftInput: buildAboutBlogDraftInput,
   createDraft: createBlogDraft,
   newRequestId: randomUUID,
+  linkSuggestionDraft: async ({ key, requestId, sourceEvent, userId }) => {
+    const linked = await setAboutSuggestionStatus({
+      key,
+      status: 'used',
+      userId,
+      requestId,
+      sourceEvent,
+    });
+    if (!linked.ok && !linked.missing) {
+      console.error('[blog] kunne ikke knytte forslag til utkast');
+    }
+  },
 };
 
 function serializeDraft(row: BlogOpsListedDraft) {
@@ -113,13 +132,27 @@ export async function handleAboutDraftCreate(
     return { status: 400, body: { error: 'invalid_input', message: parsed.message } };
   }
 
-  const { title, angle } = parsed.value;
+  const { title, angle, suggestionKey } = parsed.value;
   const requestId = parsed.value.requestId ?? deps.newRequestId();
+  const linkDraft = async () => {
+    if (!suggestionKey) return;
+    try {
+      await deps.linkSuggestionDraft({
+        key: suggestionKey,
+        requestId,
+        sourceEvent: aboutBlogSourceEvent(requestId),
+        userId: auth.userId,
+      });
+    } catch {
+      console.error('[blog] kunne ikke knytte forslag til utkast');
+    }
+  };
 
   // Both lookups run before the model so a replayed request or a CMS outage costs no generation.
   const replay = await deps.lookupPost({ sourceEvent: aboutBlogSourceEvent(requestId) });
   if (replay === null) return CMS_UNAVAILABLE;
   if (replay.found) {
+    await linkDraft();
     return {
       status: 200,
       body: {
@@ -164,6 +197,7 @@ export async function handleAboutDraftCreate(
     };
   }
 
+  await linkDraft();
   return {
     status: 200,
     body: {

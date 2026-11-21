@@ -14,6 +14,7 @@ export type BlogOpsListedDraft = {
   cmsStatus: BlogPostCmsStatus;
   sourceEvent: string | null;
   updatedAt: string | null;
+  title?: string | null;
 };
 
 export async function cmsBlogOpsListBySourceEventPrefix(
@@ -48,6 +49,7 @@ export async function cmsBlogOpsListBySourceEventPrefix(
             : 'unknown',
       sourceEvent: row.sourceEvent ?? null,
       updatedAt: row.updatedAt ?? null,
+      title: typeof row.title === 'string' ? row.title : null,
     }));
   } catch (error) {
     console.error('[cms] blog-ops list-by-source-event failed', error);

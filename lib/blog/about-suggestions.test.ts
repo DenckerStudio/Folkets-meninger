@@ -3,8 +3,11 @@ import { findForbiddenAboutTerms } from '@/lib/blog/about-draft';
 import {
   buildChangelogSuggestions,
   buildCoverageSuggestions,
+  buildEvergreenAboutSuggestions,
   buildInternalAboutSuggestions,
   buildRoadmapSuggestions,
+  planAboutSuggestionWrites,
+  visibleAboutSuggestions,
   withEvergreenFallback,
   type AboutWrittenPiece,
 } from '@/lib/blog/about-suggestions';
@@ -106,8 +109,130 @@ function testEvergreenFallback() {
   assert.deepEqual(findForbiddenAboutTerms(joined(standing)), []);
 }
 
+function testDismissedKeysStayHidden() {
+  const now = new Date('2026-11-21T12:00:00.000Z');
+  const live = buildChangelogSuggestions(
+    [
+      { id: '1', title: 'Tydeligere høringstekst', published: true },
+      { id: '2', title: 'Ny delingslenke', published: true },
+    ],
+    [],
+  );
+  assert.ok(live.some((item) => item.key === 'endringslogg:1'));
+
+  const hidden = visibleAboutSuggestions({
+    live,
+    written: [],
+    feedback: [
+      {
+        key: 'endringslogg:1',
+        title: 'Tydeligere høringstekst',
+        status: 'dismissed',
+        snoozeUntil: null,
+      },
+    ],
+    now,
+  });
+  assert.ok(!hidden.some((item) => item.key === 'endringslogg:1'));
+  assert.ok(!hidden.some((item) => item.title === 'Tydeligere høringstekst'));
+  assert.ok(hidden.some((item) => item.key === 'endringslogg:2'));
+
+  const renamed = visibleAboutSuggestions({
+    live: buildChangelogSuggestions(
+      [{ id: '9', title: 'Tydeligere høringstekst', published: true }],
+      [],
+    ),
+    written: [],
+    feedback: [
+      {
+        key: 'endringslogg:1',
+        title: 'Tydeligere høringstekst',
+        status: 'used',
+        snoozeUntil: null,
+      },
+    ],
+    now,
+  });
+  assert.ok(!renamed.some((item) => item.title === 'Tydeligere høringstekst'));
+
+  const snoozed = visibleAboutSuggestions({
+    live,
+    written: [],
+    feedback: [
+      {
+        key: 'endringslogg:2',
+        title: 'Ny delingslenke',
+        status: 'snoozed',
+        snoozeUntil: '2026-12-01T00:00:00.000Z',
+      },
+    ],
+    now,
+  });
+  assert.ok(!snoozed.some((item) => item.key === 'endringslogg:2'));
+
+  const expired = visibleAboutSuggestions({
+    live,
+    written: [],
+    feedback: [
+      {
+        key: 'endringslogg:2',
+        title: 'Ny delingslenke',
+        status: 'snoozed',
+        snoozeUntil: '2026-11-01T00:00:00.000Z',
+      },
+    ],
+    now,
+  });
+  assert.ok(expired.some((item) => item.key === 'endringslogg:2'));
+
+  const plan = planAboutSuggestionWrites({
+    existing: [
+      {
+        key: 'endringslogg:1',
+        title: 'Tydeligere høringstekst',
+        status: 'dismissed',
+        snoozeUntil: null,
+      },
+      {
+        key: 'endringslogg:2',
+        title: 'Ny delingslenke',
+        status: 'snoozed',
+        snoozeUntil: '2026-12-01T00:00:00.000Z',
+      },
+      {
+        key: 'staende:hva-tjenesten-er',
+        title: 'Derfor finnes Folkets Meninger',
+        status: 'open',
+        snoozeUntil: null,
+      },
+    ],
+    proposed: live,
+    now,
+  });
+  assert.ok(!plan.insert.some((item) => item.key === 'endringslogg:1'));
+  assert.ok(!plan.update.some((item) => item.key === 'endringslogg:1'));
+  assert.ok(!plan.deleteKeys.includes('endringslogg:1'));
+  assert.ok(!plan.update.some((item) => item.key === 'endringslogg:2'));
+  assert.ok(!plan.deleteKeys.includes('endringslogg:2'));
+  assert.ok(plan.deleteKeys.includes('staende:hva-tjenesten-er'));
+
+  const allStandingDismissed = visibleAboutSuggestions({
+    live: [],
+    written: [],
+    feedback: buildEvergreenAboutSuggestions().map((item) => ({
+      key: item.key,
+      title: item.title,
+      status: 'dismissed' as const,
+      snoozeUntil: null,
+    })),
+    now,
+  });
+  assert.deepEqual(allStandingDismissed, []);
+}
+
 testCoverageGaps();
 testDedupeAgainstExistingTitles();
 testRoadmapDoneDoesNotPromise();
 testEvergreenFallback();
+testDismissedKeysStayHidden();
 console.log('lib/blog/about-suggestions.test.ts ok');

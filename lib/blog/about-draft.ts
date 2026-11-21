@@ -98,12 +98,18 @@ const aboutDraftRequestSchema = z.object({
     .max(ABOUT_BLOG_ANGLE_MAX, `Vinklingen kan ha maks ${ABOUT_BLOG_ANGLE_MAX} tegn`)
     .optional(),
   request_id: z.uuid('request_id må være en gyldig UUID').optional(),
+  suggestion_key: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9:_-]{3,160}$/u, 'Ugyldig forslagsnøkkel')
+    .optional(),
 });
 
 export type AboutDraftRequest = {
   title: string;
   angle: string | null;
   requestId: string | null;
+  suggestionKey: string | null;
 };
 
 export type ParseAboutDraftRequestResult =
@@ -131,7 +137,12 @@ export function parseAboutDraftRequest(body: unknown): ParseAboutDraftRequestRes
 
   return {
     ok: true,
-    value: { title, angle, requestId: parsed.data.request_id?.toLowerCase() ?? null },
+    value: {
+      title,
+      angle,
+      requestId: parsed.data.request_id?.toLowerCase() ?? null,
+      suggestionKey: parsed.data.suggestion_key ?? null,
+    },
   };
 }
 

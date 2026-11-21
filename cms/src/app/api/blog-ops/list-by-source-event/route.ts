@@ -41,6 +41,7 @@ export async function POST(request: Request) {
       cmsStatus: hit.cmsStatus,
       sourceEvent: hit.sourceEvent ?? null,
       updatedAt: hit.updatedAt ?? null,
+      title: hit.title ?? null,
     })),
   });
 }

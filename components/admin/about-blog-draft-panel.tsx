@@ -26,11 +26,19 @@ type DraftJson = {
   updated_at?: string | null;
 };
 
-type AboutBlogDraftPanelProps = {
+export type AppliedAboutSuggestion = {
+  token: number;
+  key: string;
+  title: string;
+  angle: string;
+};
+
+export type AboutBlogDraftPanelProps = {
   titleMax: number;
   titleMin: number;
   angleMax: number;
   publicCategoryHref: string;
+  appliedSuggestion?: AppliedAboutSuggestion | null;
 };
 
 function toDraft(row: DraftJson): AboutDraft | null {
@@ -56,6 +64,7 @@ export function AboutBlogDraftPanel({
   titleMin,
   angleMax,
   publicCategoryHref,
+  appliedSuggestion = null,
 }: AboutBlogDraftPanelProps) {
   const [title, setTitle] = useState('');
   const [angle, setAngle] = useState('');
@@ -69,6 +78,8 @@ export function AboutBlogDraftPanel({
   const inFlightRef = useRef(false);
   // Reused until the request succeeds or the form changes, so a retry cannot create a duplicate.
   const requestIdRef = useRef<string | null>(null);
+  const suggestionKeyRef = useRef<string | null>(null);
+  const appliedTokenRef = useRef<number | null>(null);
 
   const refreshDrafts = useCallback(async () => {
     setListLoading(true);
@@ -99,6 +110,17 @@ export function AboutBlogDraftPanel({
     void refreshDrafts();
   }, [refreshDrafts]);
 
+  useEffect(() => {
+    if (!appliedSuggestion || appliedSuggestion.token === appliedTokenRef.current) return;
+    appliedTokenRef.current = appliedSuggestion.token;
+    setTitle(appliedSuggestion.title);
+    setAngle(appliedSuggestion.angle);
+    suggestionKeyRef.current = appliedSuggestion.key;
+    requestIdRef.current = null;
+    setError('');
+    setCreated(null);
+  }, [appliedSuggestion]);
+
   const trimmedTitle = title.trim();
   const titleTooShort = trimmedTitle.length > 0 && trimmedTitle.length < titleMin;
   const canSubmit = trimmedTitle.length >= titleMin && llmConfigured && !pending;
@@ -119,6 +141,7 @@ export function AboutBlogDraftPanel({
           title: trimmedTitle,
           angle: angle.trim() || undefined,
           request_id: requestIdRef.current,
+          suggestion_key: suggestionKeyRef.current ?? undefined,
         }),
       });
       const body = (await res.json().catch(() => ({}))) as DraftJson & { message?: string };
@@ -132,6 +155,7 @@ export function AboutBlogDraftPanel({
         return;
       }
       requestIdRef.current = null;
+      suggestionKeyRef.current = null;
       setCreated(draft);
       setTitle('');
       setAngle('');

@@ -19,10 +19,11 @@ type Calls = {
   builds: Array<{ title: string; angle?: string | null; requestId: string; slug: string }>;
   creates: CreateBlogDraftInput[];
   lists: number;
+  links: Array<{ key: string; requestId: string; sourceEvent: string }>;
 };
 
 function makeDeps(overrides: Partial<AboutDraftApiDeps> = {}): { deps: AboutDraftApiDeps; calls: Calls } {
-  const calls: Calls = { lookups: [], builds: [], creates: [], lists: 0 };
+  const calls: Calls = { lookups: [], builds: [], creates: [], lists: 0, links: [] };
   const deps: AboutDraftApiDeps = {
     requireAdmin: async () => ({ ok: true, userId: 'admin-1' }),
     isLlmConfigured: () => true,
@@ -72,6 +73,9 @@ function makeDeps(overrides: Partial<AboutDraftApiDeps> = {}): { deps: AboutDraf
       };
     },
     newRequestId: () => GENERATED_ID,
+    linkSuggestionDraft: async (args) => {
+      calls.links.push({ key: args.key, requestId: args.requestId, sourceEvent: args.sourceEvent });
+    },
     ...overrides,
   };
   return { deps, calls };
@@ -100,7 +104,7 @@ async function testGate() {
     assert.equal(listed.status, denied.status);
     assert.deepEqual(listed.body, { error: denied.error });
 
-    assert.deepEqual(calls, { lookups: [], builds: [], creates: [], lists: 0 });
+    assert.deepEqual(calls, { lookups: [], builds: [], creates: [], lists: 0, links: [] });
   }
 
   const route = readFileSync(
@@ -166,6 +170,22 @@ async function testCreate() {
   assert.equal(generated.calls.lookups[0].sourceEvent, `about:${GENERATED_ID}`);
   assert.equal(generated.calls.builds[0].requestId, GENERATED_ID);
   assert.equal(generated.calls.builds[0].angle, null);
+
+  const linked = makeDeps();
+  const withSuggestion = await handleAboutDraftCreate(
+    post({ title: 'Om oss', suggestion_key: 'dekning:faq:representativitet', request_id: REQUEST_ID }),
+    linked.deps,
+  );
+  assert.equal(withSuggestion.status, 200);
+  assert.deepEqual(linked.calls.links, [
+    {
+      key: 'dekning:faq:representativitet',
+      requestId: REQUEST_ID,
+      sourceEvent: `about:${REQUEST_ID}`,
+    },
+  ]);
+  assert.equal(linked.calls.builds[0].title, 'Om oss');
+  assert.equal(Object.prototype.hasOwnProperty.call(linked.calls.builds[0], 'suggestionKey'), false);
 }
 
 async function testSlugCollisionGetsOwnSlug() {

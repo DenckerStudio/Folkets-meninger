@@ -102,6 +102,7 @@ function testParseRequest() {
       title: 'Slik virker avstemninger',
       angle: 'Kort og konkret',
       requestId: REQUEST_ID,
+      suggestionKey: null,
     });
   }
 
@@ -128,6 +129,7 @@ function testParseRequest() {
     [{ title: 'Om oss', request_id: 'not-a-uuid' }, /gyldig UUID/],
     [{ title: 'Derfor bruker vi BankID' }, /kan ikke inneholde: BankID/],
     [{ title: 'Om oss', angle: 'Nevn Folkets Stemme og Reddit' }, /Folkets Stemme, Reddit/],
+    [{ title: 'Om oss', suggestion_key: 'Ikke gyldig' }, /Ugyldig forslagsnøkkel/],
   ] as const) {
     const result = parseAboutDraftRequest(body);
     assert.equal(result.ok, false, JSON.stringify(body));
