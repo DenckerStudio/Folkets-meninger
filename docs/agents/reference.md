@@ -161,6 +161,16 @@ All on **Coolify, server `klever`**:
   Admin oppgir tittel og valgfri vinkling; `ANSWER_LLM` skriver brødtekst ut fra forsideteksten i
   `lib/landing/om-content.ts`, og `createBlogDraft` lagrer et Payload-utkast med
   `source_event: about:<uuid>`. Redaktør publiserer i Payload. Øvrige generatorer bruker `forklart`.
+  About-v1-reglene i `lib/blog/about-draft.ts` gjelder fortsatt for brødteksten.
+- **Forslag til om-innlegg**: samme side viser «Foreslåtte innlegg» over skjemaet
+  (`GET`/`POST /api/admin/blog/suggestions`). Motoren i `lib/blog/about-suggestions*.ts` bruker
+  Om-teksten, endringslogg, veikart, about:-utkast og publiserte innlegg i `om-folkets-meninger`,
+  pluss produktrelevante research-klynger. Valgfritt SearXNG-søk gir bare vinkler. Uten
+  `SEARXNG_BASE_URL` sier siden fra og viser likevel de interne forslagene. Treff fra eget
+  domene droppes. Reddit er interessesignal, ikke fakta. «Bruk forslaget», «Avvis» og «Utsett»
+  lagres i `about_blog_suggestions` (migrasjon `20261121180000`, manuell apply, ikke kjørt mot
+  prod herfra). Mangler tabellen, feiler forslagsfeltet ærlig og utkastskjemaet virker.
+  `research_topics.title` og omtale-URL-er eksponeres ikke på offentlige API-er.
 - **Blog ISR / build**: runtime CMS failures on `/blogg` throw so ISR keeps the last good HTML.
   During `next build`, if CMS is down, blog index routes render «midlertidig utilgjengelig» via
   `BlogCmsUnavailableShell` (`unstable_noStore`) og **`/blogg` forblir dynamisk (ƒ) for den

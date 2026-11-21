@@ -1,4 +1,4 @@
-import { AboutBlogDraftPanel } from '@/components/admin/about-blog-draft-panel';
+import { AboutBlogAdminPanels } from '@/components/admin/about-blog-admin-panels';
 import { PageHeader } from '@/components/page-header';
 import { requireAdminPage } from '@/lib/admin/gate';
 import {
@@ -18,9 +18,9 @@ export default async function AdminBloggPage() {
       <PageHeader
         as="h2"
         title="Om Folkets Meninger"
-        description="Lag bloggutkast om tjenesten."
+        description="Forslag og utkast om tjenesten."
       />
-      <AboutBlogDraftPanel
+      <AboutBlogAdminPanels
         titleMax={BLOG_TITLE_MAX}
         titleMin={ABOUT_BLOG_TITLE_MIN}
         angleMax={ABOUT_BLOG_ANGLE_MAX}

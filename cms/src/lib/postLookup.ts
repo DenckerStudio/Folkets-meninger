@@ -8,6 +8,7 @@ export type PostLookupHit = {
   cmsStatus: PostCmsStatus;
   sourceEvent?: string;
   updatedAt?: string;
+  title?: string;
 };
 
 function resolveCmsStatus(value: unknown): PostCmsStatus {
@@ -34,13 +35,14 @@ export async function findPostBySlugOrSourceEvent(
     });
     const doc = byEvent.docs[0];
     if (doc?.id) {
-      const row = doc as { sourceEvent?: string; updatedAt?: string };
+      const row = doc as { sourceEvent?: string; updatedAt?: string; title?: string };
       return {
         id: String(doc.id),
         slug: String(doc.slug),
         cmsStatus: resolveCmsStatus((doc as { _status?: string })._status),
         sourceEvent: typeof row.sourceEvent === 'string' ? row.sourceEvent : undefined,
         updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : undefined,
+        title: typeof row.title === 'string' ? row.title : undefined,
       };
     }
   }
@@ -56,13 +58,14 @@ export async function findPostBySlugOrSourceEvent(
     });
     const doc = bySlug.docs[0];
     if (doc?.id) {
-      const row = doc as { sourceEvent?: string; updatedAt?: string };
+      const row = doc as { sourceEvent?: string; updatedAt?: string; title?: string };
       return {
         id: String(doc.id),
         slug: String(doc.slug),
         cmsStatus: resolveCmsStatus((doc as { _status?: string })._status),
         sourceEvent: typeof row.sourceEvent === 'string' ? row.sourceEvent : undefined,
         updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : undefined,
+        title: typeof row.title === 'string' ? row.title : undefined,
       };
     }
   }
@@ -92,13 +95,20 @@ export async function findPostsBySourceEventPrefix(
   const hits: PostLookupHit[] = [];
   for (const doc of result.docs ?? []) {
     if (!doc?.id) continue;
-    const row = doc as { sourceEvent?: string; updatedAt?: string; slug?: string; _status?: string };
+    const row = doc as {
+      sourceEvent?: string;
+      updatedAt?: string;
+      slug?: string;
+      _status?: string;
+      title?: string;
+    };
     hits.push({
       id: String(doc.id),
       slug: String(row.slug ?? ''),
       cmsStatus: resolveCmsStatus(row._status),
       sourceEvent: typeof row.sourceEvent === 'string' ? row.sourceEvent : undefined,
       updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : undefined,
+      title: typeof row.title === 'string' ? row.title : undefined,
     });
   }
   return hits;
