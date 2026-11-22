@@ -129,7 +129,8 @@ All on **Coolify, server `klever`**:
 - **Reddit** (interessesignal, ikke fakta): read-only via **Arctic Shift** (`r/norge`, `r/norske`,
   `r/Nordmenn`, per subreddit — aldri slått sammen). n8n skriver med
   `n8n_upsert_reddit_signals` (`service_role`) → `reddit_signals`. Kontrakt:
-  `docs/n8n/reddit-signals-contract.md`.
+  `docs/n8n/reddit-signals-contract.md`. Svarverdi (`reply_worth`) scorer om admin bør svare;
+  kontrakt `docs/n8n/reddit-reply-worth-contract.md`. Ingen auto-post — kun admin-utkast (fase 2).
 - SMTP for notifications and digests. SearXNG for Stemme+ chat source search.
 
 ## Blog
