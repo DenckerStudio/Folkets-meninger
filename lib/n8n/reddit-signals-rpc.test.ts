@@ -80,6 +80,9 @@ assert.match(
   replyWorthMigration,
   /CREATE OR REPLACE FUNCTION public\.n8n_list_reddit_reply_worth_candidates\(/i,
 );
+assert.match(replyWorthMigration, /AS \$function\$/i);
+assert.match(replyWorthMigration, /\$function\$;/i);
+assert.doesNotMatch(replyWorthMigration, /AS \$\$/);
 assert.match(
   replyWorthMigration,
   /REVOKE ALL ON FUNCTION public\.n8n_set_reddit_reply_worth\([\s\S]*?\)\s+FROM PUBLIC, anon, authenticated/i,

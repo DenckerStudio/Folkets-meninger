@@ -1,5 +1,6 @@
 -- Reddit reply_worth (fase 1): svarverdi-score for admin outreach-kø.
 -- Manuell apply på prod (Coolify Expert). Aldri auto-push.
+-- Function bodies use tagged dollar-quotes ($function$) like other reddit RPCs.
 
 BEGIN;
 SET LOCAL lock_timeout = '5s';
@@ -37,7 +38,7 @@ CREATE INDEX IF NOT EXISTS reddit_signals_reply_worth_pending_idx
   WHERE reply_worth_status = 'pending' AND status = 'ny';
 
 -- ---------------------------------------------------------------------------
--- n8n_list_reddit_reply_worth_candidates — soft SQL prefilter; full gate i n8n
+-- n8n_list_reddit_reply_worth_candidates -- soft SQL prefilter; full gate i n8n
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.n8n_list_reddit_reply_worth_candidates(
   p_limit int DEFAULT 5
@@ -62,7 +63,7 @@ LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $$
+AS $function$
 DECLARE
   v_limit int := greatest(1, least(coalesce(p_limit, 5), 25));
 BEGIN
@@ -94,7 +95,7 @@ BEGIN
   ORDER BY rs.posted_at DESC
   LIMIT v_limit;
 END;
-$$;
+$function$;
 
 REVOKE ALL ON FUNCTION public.n8n_list_reddit_reply_worth_candidates(int)
   FROM PUBLIC, anon, authenticated;
@@ -102,7 +103,7 @@ GRANT EXECUTE ON FUNCTION public.n8n_list_reddit_reply_worth_candidates(int)
   TO service_role;
 
 -- ---------------------------------------------------------------------------
--- n8n_set_reddit_reply_worth — skriv score / skip / fail (service_role only)
+-- n8n_set_reddit_reply_worth -- skriv score / skip / fail (service_role only)
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.n8n_set_reddit_reply_worth(
   p_reddit_id text,
@@ -116,7 +117,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $$
+AS $function$
 DECLARE
   v_reddit_id text;
   v_status text;
@@ -200,7 +201,7 @@ BEGIN
     'reply_gate_passes', v_row.reply_gate_passes
   );
 END;
-$$;
+$function$;
 
 REVOKE ALL ON FUNCTION public.n8n_set_reddit_reply_worth(text, text, smallint, text, text, boolean)
   FROM PUBLIC, anon, authenticated;
