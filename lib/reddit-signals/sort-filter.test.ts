@@ -12,6 +12,7 @@ const defaults: RedditSignalListFilters = {
   minScore: null,
   minComments: null,
   minRelevance: null,
+  onlyWorthReplying: false,
   status: '',
   hideRemoved: false,
   onlyWithSakLink: false,
@@ -46,5 +47,14 @@ assert.equal(byScore[0]?.redditId, 'fixture02');
 const byGrowth = sortRedditSignalRows(rows, 'growth24h');
 assert.equal(byGrowth[0]?.redditId, 'fixture01');
 assert.equal(byGrowth.at(-1)?.growth24h, null);
+
+assert.equal(
+  filterRedditSignalRows(rows, { ...defaults, onlyWorthReplying: true }).length,
+  2,
+);
+
+const byReplyWorth = sortRedditSignalRows(rows, 'reply_worth');
+assert.equal(byReplyWorth[0]?.redditId, 'fixture01');
+assert.equal(byReplyWorth[0]?.replyWorth, 5);
 
 console.log('lib/reddit-signals/sort-filter.test.ts: ok');

@@ -1,3 +1,4 @@
+import { isReplyWorthSuggested } from '@/lib/reddit-signals/reply-worth-gate';
 import { rowMatchesSpikeFocus } from '@/lib/reddit-signals/spike-badge';
 import type { RedditSignalAdminRow, RedditSignalListFilters, RedditSignalSortKey } from '@/lib/reddit-signals/types';
 
@@ -11,6 +12,8 @@ function sortValue(row: RedditSignalAdminRow, key: RedditSignalSortKey): number 
       return row.contention;
     case 'relevance':
       return row.aiRelevance;
+    case 'reply_worth':
+      return row.replyWorth;
     case 'engagement':
       return row.engagement;
     case 'growth24h':
@@ -41,6 +44,7 @@ export function filterRedditSignalRows(
     if (filters.minRelevance !== null) {
       if (row.aiRelevance === null || row.aiRelevance < filters.minRelevance) return false;
     }
+    if (filters.onlyWorthReplying && !isReplyWorthSuggested(row.replyWorth)) return false;
     if (filters.status && row.status !== filters.status) return false;
     if (filters.hideRemoved && row.removalType) return false;
     if (filters.onlyWithSakLink && !row.linkedSakViaTopic) return false;
