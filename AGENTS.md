@@ -27,7 +27,7 @@ Supabase Auth (email/password + Google).
 | `evals/` | RAG eval harness (`npm run eval:rag*`) |
 | `e2e/` | Playwright specs (`npm run test:e2e`) |
 | `cms/` | Payload CMS 3 app deployed as `fm-cms` |
-| `infra/` | Coolify runbooks (`coolify/`), SearXNG (`searxng/`) |
+| `infra/` | Coolify runbooks (`coolify/` inkl. Umami + Traefik access-log metrics), SearXNG (`searxng/`) |
 | `docs/` | Security audits, n8n contracts, [`docs/agents/reference.md`](docs/agents/reference.md) |
 
 ## Style

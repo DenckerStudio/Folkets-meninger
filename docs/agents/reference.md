@@ -287,12 +287,17 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 - Admin: `public.user_roles` + `is_admin()` via `lib/admin/gate.ts`. Hub:
   `/dashboard/admin` (Appens fremtid, Research, Vurder, Statistikk, Brukere, Stemme+).
   **Statistikk** (`/dashboard/admin/statistikk`): visitor counts, user lifecycle (registered,
-  signed in 30d, inactive), blog paths, personal share links. First-party `analytics_events` and
-  `share_links`; RPCs are service_role-only (`insert_analytics_event`, `admin_get_user_metrics`,
-  `admin_get_share_link_stats`, `admin_get_analytics_overview`, `create_share_link`,
-  `list_my_share_links`). Migrations `20261101120000`–`20261101140000` are manual — until applied,
-  the page shows an honest empty state. Public `/l/{code}` redirects and logs a click. Optional
-  self-hosted Umami (`infra/coolify/umami.md`) is off unless `NEXT_PUBLIC_ANALYTICS_ENABLED=true`.
+  signed in 30d, inactive), blog paths, personal share links, HTTP errors (app + Traefik
+  aggregates). First-party `analytics_events`, `analytics_http_daily`, and `share_links`; RPCs are
+  service_role-only (`insert_analytics_event`, `admin_get_user_metrics`,
+  `admin_get_share_link_stats`, `admin_get_analytics_overview`, `admin_get_http_errors`,
+  `purge_analytics_events_older_than`, `n8n_upsert_analytics_http_daily`, `create_share_link`,
+  `list_my_share_links`). Migrations `20261101120000`–`20261101140000` and
+  `20261122120000`–`20261122130000` are manual — until applied, the page shows an honest empty
+  state. Collect skips likely bots (`lib/analytics/bot.ts`). Public `/l/{code}` redirects and logs
+  a click. Optional self-hosted Umami (`infra/coolify/umami.md`) is off unless
+  `NEXT_PUBLIC_ANALYTICS_ENABLED=true`. Traefik aggregat-runbook:
+  `infra/coolify/access-log-metrics.md`.
   **Vurder** (`/dashboard/admin/vurder?fane=blogg|sammendrag`; Reels-fane retired 2026-11-01)
   samler vurdering av bloggutkast og AI-sammendrag.
   `POST /api/admin/content-feedback` kaller `admin_submit_content_feedback` først.
