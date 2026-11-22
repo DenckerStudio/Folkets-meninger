@@ -83,6 +83,7 @@ copy `.env.example`; DB: `npm run supabase:start`. Optional: `npm run test:e2e`.
   (white) → **Ja** (blue) — `POLL_BALLOT_BUTTON_ORDER` in `lib/polls/ballot-buttons.ts`.
 - Rebuild **Reels** or **system polls** (retired 2026-11-01).
 - Treat **Reddit** as a public factual source (interest signal only; admin/research pipeline).
+- **Reddit-svar:** kun manuell liming av admin-utkast; ingen auto-post til Reddit.
 - Expose `research_topics.title` in public APIs/UI — use public mappers in `lib/research-topics/`.
 - Propose **Vercel** hosting (production is **Coolify** only).
 - Use **folkets-stemme.no** / «Folkets Stemme» in new copy; mention **BankID** / **MinID** in

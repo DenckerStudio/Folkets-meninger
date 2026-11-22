@@ -66,5 +66,47 @@ const contract = readFileSync(
 );
 assert.match(contract, /n8n_upsert_reddit_signals/);
 assert.doesNotMatch(contract, /\/api\/ops\/reddit-signals/);
+assert.match(contract, /reply_worth/);
+
+const replyWorthMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/20261122140000_reddit_reply_worth.sql'),
+  'utf-8',
+);
+assert.match(
+  replyWorthMigration,
+  /CREATE OR REPLACE FUNCTION public\.n8n_set_reddit_reply_worth\(/i,
+);
+assert.match(
+  replyWorthMigration,
+  /CREATE OR REPLACE FUNCTION public\.n8n_list_reddit_reply_worth_candidates\(/i,
+);
+assert.match(replyWorthMigration, /AS \$function\$/i);
+assert.match(replyWorthMigration, /\$function\$;/i);
+assert.doesNotMatch(replyWorthMigration, /AS \$\$/);
+assert.match(
+  replyWorthMigration,
+  /REVOKE ALL ON FUNCTION public\.n8n_set_reddit_reply_worth\([\s\S]*?\)\s+FROM PUBLIC, anon, authenticated/i,
+);
+assert.match(
+  replyWorthMigration,
+  /GRANT EXECUTE ON FUNCTION public\.n8n_set_reddit_reply_worth\([\s\S]*?\)\s+TO service_role/i,
+);
+assert.match(
+  replyWorthMigration,
+  /REVOKE ALL ON FUNCTION public\.n8n_list_reddit_reply_worth_candidates\(int\)\s+FROM PUBLIC, anon, authenticated/i,
+);
+assert.match(
+  replyWorthMigration,
+  /GRANT EXECUTE ON FUNCTION public\.n8n_list_reddit_reply_worth_candidates\(int\)\s+TO service_role/i,
+);
+assert.doesNotMatch(replyWorthMigration, /\bselftext\b/i);
+assert.doesNotMatch(replyWorthMigration, /\bauthor\b/i);
+
+const replyWorthContract = readFileSync(
+  join(process.cwd(), 'docs/n8n/reddit-reply-worth-contract.md'),
+  'utf-8',
+);
+assert.match(replyWorthContract, /n8n_set_reddit_reply_worth/);
+assert.match(replyWorthContract, /n8n_list_reddit_reply_worth_candidates/);
 
 console.log('lib/n8n/reddit-signals-rpc.test.ts: ok');

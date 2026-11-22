@@ -2,10 +2,12 @@ import type { RedditSignalSubreddit } from '@/lib/admin/oppfanget/types';
 import { computeRedditSignalEngagement } from '@/lib/reddit-signals/engagement';
 import { computeGrowth24hEngagement } from '@/lib/reddit-signals/growth';
 import type {
+  RedditReplyWorthStatus,
   RedditSignalAdminRow,
   RedditSignalSnapshotPoint,
   RedditSignalStatus,
 } from '@/lib/reddit-signals/types';
+import { REDDIT_REPLY_WORTH_STATUSES } from '@/lib/reddit-signals/types';
 
 export type RedditSignalAdminDbRow = {
   id: string;
@@ -28,10 +30,20 @@ export type RedditSignalAdminDbRow = {
   flair: string | null;
   ai_relevance: number | null;
   ai_reason: string | null;
+  reply_worth: number | null;
+  reply_worth_reason: string | null;
+  reply_worth_status: string | null;
   cluster_id: string | null;
   status: RedditSignalStatus;
   status_reason: string | null;
 };
+
+function mapReplyWorthStatus(raw: string | null): RedditReplyWorthStatus | null {
+  if (!raw) return null;
+  return REDDIT_REPLY_WORTH_STATUSES.includes(raw as RedditReplyWorthStatus)
+    ? (raw as RedditReplyWorthStatus)
+    : null;
+}
 
 export type RedditSignalSnapshotDbRow = {
   signal_id: string;
@@ -93,6 +105,9 @@ export function mapRedditSignalAdminRow(
     flair: row.flair,
     aiRelevance: row.ai_relevance,
     aiReason: row.ai_reason,
+    replyWorth: row.reply_worth,
+    replyWorthReason: row.reply_worth_reason,
+    replyWorthStatus: mapReplyWorthStatus(row.reply_worth_status),
     clusterId: row.cluster_id,
     status: row.status,
     statusReason: row.status_reason,

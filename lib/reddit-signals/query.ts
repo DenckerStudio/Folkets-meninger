@@ -58,6 +58,7 @@ export function parseRedditSignalsFilters(
     minScore: parseOptionalInt(pick('minScore')),
     minComments: parseOptionalInt(pick('minComments')),
     minRelevance: parseOptionalInt(pick('minRelevance')),
+    onlyWorthReplying: parseBoolFlag(pick('worth')),
     status: parseStatus(pick('status')),
     hideRemoved: parseBoolFlag(pick('hideRemoved')),
     onlyWithSakLink: parseBoolFlag(pick('onlySak')),
@@ -78,6 +79,7 @@ export function buildRedditSignalsQueryString(
   if (filters.minScore !== null) params.set('minScore', String(filters.minScore));
   if (filters.minComments !== null) params.set('minComments', String(filters.minComments));
   if (filters.minRelevance !== null) params.set('minRelevance', String(filters.minRelevance));
+  if (filters.onlyWorthReplying) params.set('worth', '1');
   if (filters.status) params.set('status', filters.status);
   if (filters.hideRemoved) params.set('hideRemoved', '1');
   if (filters.onlyWithSakLink) params.set('onlySak', '1');

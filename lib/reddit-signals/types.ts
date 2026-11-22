@@ -16,9 +16,19 @@ export const REDDIT_SIGNAL_SORT_KEYS = [
   'comments',
   'contention',
   'relevance',
+  'reply_worth',
   'engagement',
   'growth24h',
 ] as const;
+
+export const REDDIT_REPLY_WORTH_STATUSES = [
+  'pending',
+  'scored',
+  'skipped',
+  'failed',
+] as const;
+
+export type RedditReplyWorthStatus = (typeof REDDIT_REPLY_WORTH_STATUSES)[number];
 
 export type RedditSignalSortKey = (typeof REDDIT_SIGNAL_SORT_KEYS)[number];
 
@@ -55,6 +65,9 @@ export type RedditSignalAdminRow = {
   flair: string | null;
   aiRelevance: number | null;
   aiReason: string | null;
+  replyWorth: number | null;
+  replyWorthReason: string | null;
+  replyWorthStatus: RedditReplyWorthStatus | null;
   clusterId: string | null;
   status: RedditSignalStatus;
   statusReason: string | null;
@@ -74,6 +87,7 @@ export type RedditSignalListFilters = {
   minScore: number | null;
   minComments: number | null;
   minRelevance: number | null;
+  onlyWorthReplying: boolean;
   status: RedditSignalStatus | '';
   hideRemoved: boolean;
   onlyWithSakLink: boolean;

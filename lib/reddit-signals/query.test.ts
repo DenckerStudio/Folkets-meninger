@@ -17,25 +17,28 @@ const parsed = parseRedditSignalsFilters({
   minScore: '50',
   minComments: '10',
   minRelevance: '3',
+  worth: '1',
   status: 'ny',
   hideRemoved: '1',
   onlySak: 'true',
   spike: 'post:abc123',
-  sort: 'growth24h',
+  sort: 'reply_worth',
 });
 assert.equal(parsed.subreddit, 'norge');
 assert.equal(parsed.minScore, 50);
 assert.equal(parsed.minRelevance, 3);
+assert.equal(parsed.onlyWorthReplying, true);
 assert.equal(parsed.onlyWithSakLink, true);
 assert.equal(parsed.spikeFocus?.redditId, 'abc123');
-assert.equal(parsed.sort, 'growth24h');
+assert.equal(parsed.sort, 'reply_worth');
 
 assert.equal(isRedditSignalsView({ view: 'signaler' }), true);
 assert.equal(isRedditSignalsView({}), false);
 
 const qs = buildRedditSignalsQueryString(parsed);
 assert.match(qs, /view=signaler/);
-assert.match(qs, /sort=growth24h/);
+assert.match(qs, /worth=1/);
+assert.match(qs, /sort=reply_worth/);
 
 assert.equal(
   buildRedditSignalsAdminPath(parsed),

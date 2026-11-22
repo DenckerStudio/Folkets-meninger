@@ -13,6 +13,7 @@ export const REDDIT_SIGNAL_SORT_LABELS: Record<RedditSignalSortKey, string> = {
   comments: 'Kommentarer',
   contention: 'Kommentarer per poeng',
   relevance: 'Relevans',
+  reply_worth: 'Svarverdi',
   engagement: 'Engasjement',
   growth24h: 'Vekst siste 24 t',
 };

@@ -35,6 +35,7 @@ import {
 } from '@/lib/reddit-signals/labels';
 import { REDDIT_SIGNALS_LIST_LIMIT } from '@/lib/reddit-signals/admin-map';
 import { RedditSubredditBadge, formatRedditContention } from '@/lib/reddit-signals/format';
+import { isReplyWorthSuggested } from '@/lib/reddit-signals/reply-worth-gate';
 import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
@@ -291,6 +292,14 @@ function RedditSignalRow({
             <RedditSubredditBadge subreddit={row.subreddit} />
             <StatusBadge status={row.status} />
             {spikeHighlight ? <RedditSpikeActiveRowMark /> : null}
+            {isReplyWorthSuggested(row.replyWorth) ? (
+              <span
+                className={cn(chipClass, 'border-brand/40 bg-brand/10 text-brand')}
+                title={row.replyWorthReason ?? undefined}
+              >
+                Verdt å svare
+              </span>
+            ) : null}
             {row.flair ? <span className={chipClass}>{row.flair}</span> : null}
           </div>
           <a
@@ -305,6 +314,13 @@ function RedditSignalRow({
           {row.topic ? (
             <p className="text-xs text-muted-foreground">
               Tema: <span className="text-foreground">{row.topic}</span>
+            </p>
+          ) : null}
+          {row.replyWorth !== null ? (
+            <p className="text-xs text-muted-foreground">
+              Svarverdi:{' '}
+              <span className="font-medium tabular-nums text-foreground">{row.replyWorth}/5</span>
+              {row.replyWorthReason ? ` — ${row.replyWorthReason}` : null}
             </p>
           ) : null}
           {row.aiRelevance !== null ? (
@@ -400,6 +416,7 @@ export default function RedditSignalsClient({
   const [minRelevance, setMinRelevance] = useState(
     initialFilters.minRelevance !== null ? String(initialFilters.minRelevance) : '',
   );
+  const [onlyWorth, setOnlyWorth] = useState(initialFilters.onlyWorthReplying);
   const [status, setStatus] = useState(initialFilters.status);
   const [hideRemoved, setHideRemoved] = useState(initialFilters.hideRemoved);
   const [onlySak, setOnlySak] = useState(initialFilters.onlyWithSakLink);
@@ -426,6 +443,7 @@ export default function RedditSignalsClient({
       minScore: parseFilterNum(debouncedMinScore),
       minComments: parseFilterNum(debouncedMinComments),
       minRelevance: parseFilterNum(debouncedMinRelevance),
+      onlyWorthReplying: onlyWorth,
       status,
       hideRemoved,
       onlyWithSakLink: onlySak,
@@ -439,6 +457,7 @@ export default function RedditSignalsClient({
       debouncedMinScore,
       debouncedMinComments,
       debouncedMinRelevance,
+      onlyWorth,
       status,
       hideRemoved,
       onlySak,
@@ -473,6 +492,7 @@ export default function RedditSignalsClient({
     setMinScore('');
     setMinComments('');
     setMinRelevance('');
+    setOnlyWorth(false);
     setStatus('');
     setHideRemoved(false);
     setOnlySak(false);
@@ -484,6 +504,7 @@ export default function RedditSignalsClient({
       minScore: null,
       minComments: null,
       minRelevance: null,
+      onlyWorthReplying: false,
       status: '',
       hideRemoved: false,
       onlyWithSakLink: false,
@@ -659,6 +680,15 @@ export default function RedditSignalsClient({
           <label className="inline-flex min-h-11 items-center gap-2 text-sm">
             <input
               type="checkbox"
+              checked={onlyWorth}
+              onChange={(e) => setOnlyWorth(e.target.checked)}
+              className="h-4 w-4 rounded border-border"
+            />
+            Kun verdt å svare
+          </label>
+          <label className="inline-flex min-h-11 items-center gap-2 text-sm">
+            <input
+              type="checkbox"
               checked={hideRemoved}
               onChange={(e) => setHideRemoved(e.target.checked)}
               className="h-4 w-4 rounded border-border"
@@ -707,7 +737,14 @@ export default function RedditSignalsClient({
       ) : null}
 
       {initialData.rows.length === 0 && !initialData.tableMissing ? (
-        <EmptyState title="Ingen signaler" description="Justér filter eller vent på ny innhenting." />
+        <EmptyState
+          title="Ingen signaler"
+          description={
+            initialFilters.onlyWorthReplying
+              ? 'Ingen signaler med svarverdi 4–5 i utvalget. Fjern filteret eller vent på ny scoring.'
+              : 'Justér filter eller vent på ny innhenting.'
+          }
+        />
       ) : initialData.rows.length > 0 ? (
         <div className={cn('space-y-3', listPending && 'opacity-60')}>
           {initialData.rows.map((row) => (

@@ -57,6 +57,7 @@ function signalListFiltersForCluster(clusterId: string): RedditSignalListFilters
     minScore: null,
     minComments: null,
     minRelevance: null,
+    onlyWorthReplying: false,
     status: '',
     hideRemoved: false,
     onlyWithSakLink: false,

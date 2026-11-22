@@ -12,9 +12,22 @@ import { isRedditSignalsFixturePreviewAllowed } from '@/lib/reddit-signals/previ
 import { filterRedditSignalRows, sortRedditSignalRows } from '@/lib/reddit-signals/sort-filter';
 import type { RedditSignalListFilters, RedditSignalListResponse } from '@/lib/reddit-signals/types';
 
-function isMissingRedditTableError(error: { message?: string } | null): boolean {
+const REDDIT_SIGNAL_LIST_SELECT_BASE =
+  'id, reddit_id, subreddit, title, url, score, num_comments, contention, num_crossposts, upvote_ratio, posted_at, snapshot_at, first_seen_at, last_seen_at, topic, related_issue_id, removal_type, flair, ai_relevance, ai_reason, cluster_id, status, status_reason';
+
+const REDDIT_SIGNAL_LIST_SELECT_WITH_REPLY_WORTH = `${REDDIT_SIGNAL_LIST_SELECT_BASE}, reply_worth, reply_worth_reason, reply_worth_status`;
+
+function isMissingRedditTableError(error: { message?: string; code?: string } | null): boolean {
   if (!error) return false;
   return /reddit_signals|does not exist|undefined_table/i.test(error.message ?? '');
+}
+
+function isMissingReplyWorthColumnError(error: { message?: string; code?: string } | null): boolean {
+  if (!error) return false;
+  if (error.code === '42703' || error.code === 'PGRST204') {
+    return /reply_worth/i.test(error.message ?? '');
+  }
+  return /column .*reply_worth.* does not exist/i.test(error.message ?? '');
 }
 
 async function loadSakLinksBySignalId(
@@ -102,13 +115,23 @@ export async function listRedditSignalsForAdmin(
   }
 
   const supabase = await getServerSupabase();
-  const { data, error } = await supabase
+  const primary = await supabase
     .from('reddit_signals')
-    .select(
-      'id, reddit_id, subreddit, title, url, score, num_comments, contention, num_crossposts, upvote_ratio, posted_at, snapshot_at, first_seen_at, last_seen_at, topic, related_issue_id, removal_type, flair, ai_relevance, ai_reason, cluster_id, status, status_reason',
-    )
+    .select(REDDIT_SIGNAL_LIST_SELECT_WITH_REPLY_WORTH)
     .order('last_seen_at', { ascending: false })
     .limit(REDDIT_SIGNALS_LIST_LIMIT);
+
+  const fallbackNeeded = Boolean(primary.error && isMissingReplyWorthColumnError(primary.error));
+  const fallback = fallbackNeeded
+    ? await supabase
+        .from('reddit_signals')
+        .select(REDDIT_SIGNAL_LIST_SELECT_BASE)
+        .order('last_seen_at', { ascending: false })
+        .limit(REDDIT_SIGNALS_LIST_LIMIT)
+    : null;
+
+  const data = (fallback ?? primary).data;
+  const error = (fallback ?? primary).error;
 
   if (error) {
     if (isMissingRedditTableError(error)) {
@@ -125,7 +148,12 @@ export async function listRedditSignalsForAdmin(
     throw error;
   }
 
-  const dbRows = (data ?? []) as RedditSignalAdminDbRow[];
+  const dbRows = ((data ?? []) as RedditSignalAdminDbRow[]).map((row) => ({
+    ...row,
+    reply_worth: row.reply_worth ?? null,
+    reply_worth_reason: row.reply_worth_reason ?? null,
+    reply_worth_status: row.reply_worth_status ?? null,
+  }));
   const signalIds = dbRows.map((r) => r.id);
   const [sakBySignal, snapshotsBySignal, issueTitles] = await Promise.all([
     loadSakLinksBySignalId(signalIds),

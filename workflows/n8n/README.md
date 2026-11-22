@@ -417,6 +417,12 @@ curl -sS -H "x-cron-secret: $CRON_SECRET" \
 
 Sync til live n8n: **Folkets Aksjoner – fase 1 fangst** (`0ptiRfF2qPgu6flm`).
 
+## Reddit svarverdi (`reply_worth`)
+
+Workflow-kilde: [`reddit-reply-worth.workflow.ts`](reddit-reply-worth.workflow.ts) · [`reddit-reply-worth.shared.ts`](reddit-reply-worth.shared.ts).
+
+Schedule (15 min) → `n8n_list_reddit_reply_worth_candidates` → heuristikk-gate → Ollama JSON → `n8n_set_reddit_reply_worth`. Scorer kun metadata (ingen selftext). Kontrakt: `docs/n8n/reddit-reply-worth-contract.md`. Krever migrasjon `20261122140000_reddit_reply_worth.sql`. **Deploy manuelt** — ikke importer JSON til prod uten eier-prosess.
+
 ## Bloggutkast (`POST /api/ops/blog/drafts`)
 
 App-endepunkt (ikke fm-cms direkte): `POST https://www.folkets-meninger.no/api/ops/blog/drafts` med header `x-cron-secret`.
