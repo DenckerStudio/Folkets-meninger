@@ -91,4 +91,4 @@ export const TRUST_THIRD_PARTY_PROVIDERS: SubprocessorRow[] = [
 ];
 
 export const TRUST_ANALYTICS_NOTE =
-  'Vi bruker ikke Google Analytics eller andre annonseanalyseverktøy. Besøk kan telles anonymt på vår egen server i Norge (sidevisning, henvisning og delingslenke), slik at vi kan drive og forbedre tjenesten. Vi selger ikke disse opplysningene og deler dem ikke med annonsenettverk. Innloggede administratorer kan se hvem som har opprettet en delingslenke, men ikke hvem som klikket.';
+  'Vi bruker ikke Google Analytics eller andre annonseanalyseverktøy. Besøk telles anonymt på vår egen server i Norge (sidevisning, henvisning, delingslenke og aggregerte feilkoder), via egen analyse og valgfritt self-hostet Umami. Crawlere filtreres der det er praktisk. Råhendelser slettes etter inntil 365 dager. Vi selger ikke disse opplysningene og deler dem ikke med annonsenettverk. Innloggede administratorer kan se hvem som har opprettet en delingslenke, men ikke hvem som klikket.';
