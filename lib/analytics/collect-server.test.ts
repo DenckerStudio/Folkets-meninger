@@ -101,4 +101,24 @@ assert.equal(row.session_hash, hash1);
 assert.deepEqual(row.metadata, { bucket: 'social_facebook' });
 assert.equal('referrer' in row, false);
 
+assert.equal(
+  parseCollectPayload({ eventName: 'http_error', path: '/missing', status: 399 }).ok,
+  false,
+);
+const httpError = parseCollectPayload({
+  eventName: 'http_error',
+  path: '/dashboard/sak/103102?x=1',
+  status: 404,
+  method: 'get',
+});
+assert.equal(httpError.ok, true);
+if (!httpError.ok) throw new Error('expected http_error ok');
+assert.equal(httpError.value.eventName, 'http_error');
+assert.equal(httpError.value.path, '/dashboard/sak/:id');
+assert.deepEqual(httpError.value.metadata, {
+  status: 404,
+  method: 'GET',
+  source: 'client',
+});
+
 console.log('collect-server.test.ts ok');

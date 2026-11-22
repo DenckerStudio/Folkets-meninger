@@ -4,6 +4,21 @@ Anonym besøksanalyse for **fm-web** (`www.folkets-meninger.no`). Scriptet laste
 
 Drift på Coolify-server **`klever`**. Ikke Vercel.
 
+## Prod-status (sjekkliste)
+
+Sist sjekket fra agent (2026-11-22). Oppdater når Coolify Expert/Mathias har kjørt deploy.
+
+| Sjekk | Status |
+|-------|--------|
+| Umami-tjeneste i Coolify | **Mangler** — ingen Umami-service i prosjektet; `analytics.folkets-meninger.no` svarer ikke |
+| fm-web `NEXT_PUBLIC_ANALYTICS_ENABLED` | Nøkkel finnes i Coolify (verdi ikke lest) |
+| fm-web `NEXT_PUBLIC_UMAMI_SCRIPT_URL` / `WEBSITE_ID` | **Mangler** i Coolify env-nøkkelliste |
+| fm-web `ANALYTICS_COLLECT_SECRET` | Nøkkel finnes i Coolify |
+| Migrasjoner `20261101120000`–`20261101140000` | Må verifiseres manuelt i Supabase (agent apply ikke) |
+| Bot-filter i Umami UI | Aktiver etter første deploy (se under) |
+
+**Offentlige tall** (førsteparts + Umami) er JS-baserte og bot-filtrerte. **Traefik-tall** inkluderer crawlere — se [`access-log-metrics.md`](access-log-metrics.md).
+
 ## Tjeneste
 
 | Felt | Verdi |
@@ -49,6 +64,12 @@ Etter deploy og første admin-bruker:
 ### Cookieless
 
 Aktiver **cookieless tracking** i Umami hvis innstillingen finnes i den installerte versjonen (Settings / nettsted — bekreft i UI etter oppgradering). Da trenger fm-web **ingen** informasjonskapsel-banner for Umami.
+
+### Bot-filtrering
+
+1. I Umami (Settings / nettsted): skru på **bot filtering** / ignorer kjente bot-UA hvis tilgjengelig for image-versjonen.
+2. fm-web førsteparts: `lib/analytics/bot.ts` + `POST /api/analytics/collect` returnerer **204 uten insert** for sannsynlige bots (ikke avslør filtrering).
+3. Hold Umami og førsteparts synkronisert i fortellingen: «Vi teller menneskelig trafikk; crawlere filtreres.»
 
 ## fm-web etter Umami er oppe
 
