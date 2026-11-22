@@ -82,3 +82,9 @@ Ugyldige enkeltrader havner i `rejected`; øvrige rader committes.
 
 - Ingen forfatter, brukernavn, selftext eller kommentarinnhold lagres.
 - Reddit er **interessesignal**; fakta krever uavhengige kilder.
+
+## Svarverdi (`reply_worth`)
+
+Separat scoring for «verdt å svare» (admin outreach-kø). Se
+[`reddit-reply-worth-contract.md`](reddit-reply-worth-contract.md).
+Upsert lagre fortsatt **ikke** selftext; `n8n_set_reddit_reply_worth` skriver kun score-felter.
