@@ -53,6 +53,10 @@ Credential: eksisterende Supabase API-credential (**Folkets Meninger Self-hosted
 
 SDK-skisse i repo: [`workflows/n8n/analytics-http-daily.workflow.ts`](../../workflows/n8n/analytics-http-daily.workflow.ts) (må fylles med reell logg-lesing før publish).
 
+**Retention** (sletting av `analytics_events` eldre enn 365 d) er en **egen** utkast-flyt:
+[`workflows/n8n/analytics-events-retention.workflow.ts`](../../workflows/n8n/analytics-events-retention.workflow.ts).
+Ikke importer eller aktiver den før Mathias sier ja — HTTP-aggregater kan gå live uten purge.
+
 ## Pipeline (valg B — Vector)
 
 Bruk bare hvis n8n blir skjør ved volum: Vector → batch HTTP mot samme RPC. Pin image; ingen offentlig port.

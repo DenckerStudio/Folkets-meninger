@@ -94,6 +94,36 @@ export function ErrorsPanel({
                 Ingen serverrader ennå.
               </p>
             )}
+            {edge.fiveXxByDay.length > 0 ? (
+              <div className="overflow-x-auto rounded-xl border border-border">
+                <table className="min-w-full text-sm">
+                  <caption className="sr-only">5xx per dag fra serveren</caption>
+                  <thead>
+                    <tr className="border-b border-border bg-muted/40 text-left">
+                      <th scope="col" className="px-4 py-2.5 font-medium text-muted-foreground">
+                        Dato
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-4 py-2.5 text-right font-medium text-muted-foreground"
+                      >
+                        5xx
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {edge.fiveXxByDay.map((row) => (
+                      <tr key={row.bucketDate} className="border-b border-border last:border-0">
+                        <td className="px-4 py-2.5 text-foreground">{row.bucketDate}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                          {row.requestCount.toLocaleString('nb-NO')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
             {edge.top404.length > 0 ? (
               <div className="overflow-x-auto rounded-xl border border-border">
                 <table className="min-w-full text-sm">

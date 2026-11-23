@@ -20,7 +20,9 @@ assert.match(panel, /role="alert"/);
 assert.match(panel, /Fra serveren/);
 assert.match(panel, /Feilstatistikk fra serveren er ikke satt opp ennå/);
 assert.match(panel, /caption className="sr-only">Statusklasser fra serveren/);
+assert.match(panel, /caption className="sr-only">5xx per dag fra serveren/);
 assert.match(panel, /caption className="sr-only">Topp app-feil siste 30 dager/);
+assert.match(panel, /fiveXxByDay/);
 assert.doesNotMatch(panel, /Fra edge \(Traefik\)/);
 assert.doesNotMatch(panel, /Coolify Expert/);
 
