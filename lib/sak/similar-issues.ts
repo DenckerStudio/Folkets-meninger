@@ -4,6 +4,7 @@ import { resolveSakStatusFromSources, type SakTreatmentStatus } from '@/lib/sak-
 import { sakStatusOrOutcomeLabel } from '@/lib/sak/sak-outcome';
 import { parseSimilarSakFacets, type SimilarSakFacets } from '@/lib/sak/similar-issues-labels';
 import { loadSimilarSakerWithStatus, type SimilarSakerLoadResult } from '@/lib/sak/similar-issues-load';
+import { loadWithOkOnlyCache } from '@/lib/sak/similar-issues-cache';
 
 export type SimilarSakListItem = {
   id: string;
@@ -140,9 +141,8 @@ export function fetchSimilarSakerWithStatus(issueId: string): Promise<SimilarSak
   const id = issueId.trim();
   if (!id) return Promise.resolve({ status: 'ok', items: [] });
 
-  return unstable_cache(
+  return loadWithOkOnlyCache(
     () => loadSimilarSakerWithStatus(id),
-    ['similar-stortinget-issues-status', id],
-    { revalidate: 3600 },
-  )();
+    (fn) => unstable_cache(fn, ['similar-stortinget-issues-status', id], { revalidate: 3600 }),
+  );
 }
