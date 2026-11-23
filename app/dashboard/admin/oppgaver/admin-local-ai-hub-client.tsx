@@ -2,7 +2,6 @@
 
 import { useCallback, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { CheckCircle2, Columns3, ExternalLink, TriangleAlert } from 'lucide-react';
 import { AdminBackLink } from '@/components/admin/admin-shell';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -21,7 +20,8 @@ import {
   parseStoredHubNotice,
   serializeHubNotice,
 } from '@/lib/admin/local-ai-hub/approve-hub-notice';
-import type { LocalAiFinishedRow, LocalAiOverviewResult } from '@/lib/admin/local-ai-hub/overview';
+import { buildOverviewRefreshRequestInit } from '@/lib/admin/local-ai-hub/overview-client-refresh';
+import type { LocalAiFinishedRow, LocalAiOverviewResult } from '@/lib/admin/local-ai-hub/overview-types';
 import { routes } from '@/lib/routes';
 import { verdictLabel, type ReviewVerdictOutcome } from '@/lib/admin/local-ai-hub/verdict-parser';
 import { cn } from '@/lib/utils';
@@ -80,7 +80,6 @@ export function LocalAiHubPageSkeleton() {
 }
 
 export default function AdminLocalAiHubClient({ initial }: Props) {
-  const router = useRouter();
   const [overview, setOverview] = useState(initial);
   const [pendingTaskId, setPendingTaskId] = useState<number | null>(null);
   const [rejectConfirmId, setRejectConfirmId] = useState<number | null>(null);
@@ -137,14 +136,14 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/local-ai-hub/overview');
+      const res = await fetch('/api/admin/local-ai-hub/overview', buildOverviewRefreshRequestInit());
+      if (res.status === 304) return;
       const data = (await res.json()) as LocalAiOverviewResult;
       if (res.ok) setOverview(data);
     } catch {
       // beholder forrige data
     }
-    router.refresh();
-  }, [router]);
+  }, []);
 
   if (!overview.ok && overview.kind === 'config') {
     return (
