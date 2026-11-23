@@ -4,9 +4,11 @@ import { useEffect, useId, useState } from 'react';
 import Link from 'next/link';
 import { BarChart3, Download } from 'lucide-react';
 import type { AdminAnalyticsOverview } from '@/lib/admin/analytics/overview';
+import type { AdminHttpErrorsOverview } from '@/lib/admin/analytics/http-errors';
 import { OverviewCards } from '@/components/admin/analytics/overview-cards';
 import { ShareLinksTable } from '@/components/admin/analytics/share-links-table';
 import { TrafficTable } from '@/components/admin/analytics/traffic-table';
+import { ErrorsPanel } from '@/components/admin/analytics/errors-panel';
 import { AnalyticsCollectionDisabled } from '@/components/admin/analytics/analytics-collection-disabled';
 import { AdminBackLink } from '@/components/admin/admin-shell';
 import { isAnalyticsEnabled } from '@/lib/analytics/flags';
@@ -23,6 +25,7 @@ const STAT_TABS = [
   { id: 'trafikk', label: 'Trafikk' },
   { id: 'deling', label: 'Deling' },
   { id: 'blogg', label: 'Blogg' },
+  { id: 'feil', label: 'Feil' },
   { id: 'eksport', label: 'Eksport' },
 ] as const;
 
@@ -146,16 +149,44 @@ function StatTabPanel({
   loadState,
   downloading,
   onDownloadCsv,
+  edgeState,
 }: {
   tab: StatTabId;
   loadState: LoadState;
   downloading: boolean;
   onDownloadCsv: () => void;
+  edgeState:
+    | { status: 'loading' }
+    | { status: 'error' }
+    | { status: 'ready'; data: AdminHttpErrorsOverview };
 }) {
   const trafficCollectionEnabled = isAnalyticsEnabled();
 
   if (tab === 'eksport') {
     return <ExportPanel downloading={downloading} onDownloadCsv={onDownloadCsv} />;
+  }
+
+  if (tab === 'feil') {
+    const appLoading = loadState.status === 'loading';
+    const appError = loadState.status === 'error';
+    const appReady =
+      loadState.status === 'ready' && Boolean(loadState.data.ready && loadState.data.traffic);
+    const appErrors =
+      loadState.status === 'ready' && loadState.data.ready && loadState.data.traffic
+        ? loadState.data.traffic.topAppErrors
+        : [];
+    return (
+      <ErrorsPanel
+        collectionEnabled={trafficCollectionEnabled}
+        appLoading={appLoading}
+        appError={appError}
+        appReady={appReady}
+        appErrors={appErrors}
+        edge={edgeState.status === 'ready' ? edgeState.data : null}
+        edgeLoading={edgeState.status === 'loading'}
+        edgeError={edgeState.status === 'error'}
+      />
+    );
   }
 
   if (loadState.status === 'loading') {
@@ -222,10 +253,20 @@ function StatTabPanel({
   }
 }
 
-export default function AdminStatistikkClient() {
+type EdgeLoadState =
+  | { status: 'loading' }
+  | { status: 'error' }
+  | { status: 'ready'; data: AdminHttpErrorsOverview };
+
+export default function AdminStatistikkClient({
+  umamiAdminUrl = null,
+}: {
+  umamiAdminUrl?: string | null;
+}) {
   const tablistId = useId();
   const [tab, setTab] = useState<StatTabId>('oversikt');
   const [loadState, setLoadState] = useState<LoadState>({ status: 'loading' });
+  const [edgeState, setEdgeState] = useState<EdgeLoadState>({ status: 'loading' });
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
@@ -246,7 +287,25 @@ export default function AdminStatistikkClient() {
       }
     }
 
+    async function loadEdge() {
+      setEdgeState({ status: 'loading' });
+      try {
+        const res = await fetch('/api/admin/analytics/http-errors?days=30', {
+          credentials: 'same-origin',
+        });
+        if (!res.ok) {
+          if (!cancelled) setEdgeState({ status: 'error' });
+          return;
+        }
+        const data = (await res.json()) as AdminHttpErrorsOverview;
+        if (!cancelled) setEdgeState({ status: 'ready', data });
+      } catch {
+        if (!cancelled) setEdgeState({ status: 'error' });
+      }
+    }
+
     void load();
+    void loadEdge();
 
     return () => {
       cancelled = true;
@@ -278,8 +337,26 @@ export default function AdminStatistikkClient() {
           Statistikk
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Besøk, deling og brukertall for admin. Myndighetseksport finnes under fanen Eksport.
+          Besøk, deling, feilkoder og brukertall for admin. Myndighetseksport finnes under fanen
+          Eksport.
         </p>
+        {umamiAdminUrl ? (
+          <p className="mt-2 text-sm">
+            <a
+              href={umamiAdminUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                'font-medium text-brand underline-offset-4 hover:underline',
+                VURDER_FOCUS_RING,
+              )}
+            >
+              Åpne detaljert trafikk i Umami
+              <span aria-hidden="true"> ↗</span>
+              <span className="sr-only"> (åpnes i ny fane)</span>
+            </a>
+          </p>
+        ) : null}
       </div>
 
       <div
@@ -322,6 +399,7 @@ export default function AdminStatistikkClient() {
           loadState={loadState}
           downloading={downloading}
           onDownloadCsv={downloadCsv}
+          edgeState={edgeState}
         />
       </section>
 

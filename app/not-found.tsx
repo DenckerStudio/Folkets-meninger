@@ -1,11 +1,13 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { AnalyticsHttpErrorBeacon } from '@/components/analytics/analytics-http-error-beacon';
 import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import { cn } from '@/lib/utils';
 
 export default function NotFound() {
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
+      <AnalyticsHttpErrorBeacon status={404} />
       <h2 className="text-4xl font-bold text-foreground mb-4">Siden ble ikke funnet</h2>
       <p className="text-lg text-muted-foreground mb-8">
         Vi fant ikke siden du lette etter. Den kan ha blitt flyttet eller slettet.

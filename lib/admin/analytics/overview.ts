@@ -29,6 +29,7 @@ export type AdminAnalyticsOverview = {
     topPaths: Array<{ path: string; views: number }>;
     channels: Array<{ bucket: string; views: number }>;
     blogPaths: Array<{ path: string; views: number }>;
+    topAppErrors: Array<{ path: string; status: number; count: number }>;
   } | null;
 };
 
@@ -73,6 +74,18 @@ function mapChannelViews(rows: unknown): Array<{ bucket: string; views: number }
   return rows.map((row) => {
     const r = row as Record<string, unknown>;
     return { bucket: asString(r.bucket), views: asNumber(r.views) };
+  });
+}
+
+function mapAppErrors(rows: unknown): Array<{ path: string; status: number; count: number }> {
+  if (!Array.isArray(rows)) return [];
+  return rows.map((row) => {
+    const r = row as Record<string, unknown>;
+    return {
+      path: asString(r.path),
+      status: asNumber(r.status),
+      count: asNumber(r.count),
+    };
   });
 }
 
@@ -126,6 +139,7 @@ export function mapAdminAnalyticsOverview(raw: {
           topPaths: mapPathViews(trafficRaw.topPaths),
           channels: mapChannelViews(trafficRaw.channels),
           blogPaths: mapPathViews(trafficRaw.blogPaths),
+          topAppErrors: mapAppErrors(trafficRaw.topAppErrors),
         }
       : null;
 

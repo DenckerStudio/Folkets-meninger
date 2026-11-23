@@ -52,6 +52,7 @@ const mapped = mapAdminAnalyticsOverview({
     topPaths: [{ path: '/dashboard/utforsk', views: 400 }],
     channels: [{ bucket: 'direct', views: 300 }],
     blogPaths: [{ path: '/blogg/foo', views: 20 }],
+    topAppErrors: [{ path: '/dashboard/sak/:id', status: 404, count: 3 }],
   },
 });
 
@@ -66,6 +67,8 @@ assert.equal(mapped.traffic?.pageViews, 1000);
 assert.equal(mapped.traffic?.topPaths[0]?.path, '/dashboard/utforsk');
 assert.equal(mapped.traffic?.channels[0]?.bucket, 'direct');
 assert.equal(mapped.traffic?.blogPaths[0]?.views, 20);
+assert.equal(mapped.traffic?.topAppErrors[0]?.status, 404);
+assert.equal(mapped.traffic?.topAppErrors[0]?.count, 3);
 
 assert.deepEqual(analyticsOverviewNotReady, {
   ready: false,

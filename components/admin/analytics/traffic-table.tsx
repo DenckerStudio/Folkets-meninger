@@ -29,6 +29,9 @@ export function TrafficTable({ topPaths, channels, collectionEnabled }: TrafficT
 
   return (
     <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">
+        Tallene er filtrert for kjente crawlere.
+      </p>
       {topPaths.length > 0 ? (
         <div>
           <h2 className="mb-3 text-sm font-semibold text-foreground">Topp stier</h2>

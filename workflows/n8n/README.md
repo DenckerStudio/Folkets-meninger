@@ -13,6 +13,8 @@ Etter `20260823200000_n8n_postgrest_rpcs.sql` (`supabase db push`) skriver n8n v
 | System poll (Reels) draft | Aktiv | https://n8n.heyklever.app/workflow/TWTrqNYhvYcWz4UX |
 | Pipeline-helse | Aktiv | https://n8n.heyklever.app/workflow/m6lHrqTxSVdJTcma |
 | n8n feilvarsling | Aktiv | https://n8n.heyklever.app/workflow/iBNVwqPIsvf0JmTc |
+| Analytics HTTP daily | Utkast (ikke publisert) | `analytics-http-daily.workflow.ts` — se `infra/coolify/access-log-metrics.md` |
+| Analytics events retention | Utkast (ikke publisert; krever Mathias-ja) | `analytics-events-retention.workflow.ts` — separat fra HTTP-aggregat |
 | Forum (v9/v12/v13/RSS) | Arkivert | `archive/forum/` |
 
 ## Anbefalt sak-flyt
