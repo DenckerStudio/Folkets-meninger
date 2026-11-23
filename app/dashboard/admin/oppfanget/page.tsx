@@ -1,4 +1,5 @@
 import { permanentRedirect } from 'next/navigation';
+import { requireAdminPage } from '@/lib/admin/gate';
 import { routes } from '@/lib/routes';
 
 export const dynamic = 'force-dynamic';
@@ -9,6 +10,7 @@ type PageProps = {
 
 /** Permanent redirect; query params (filtre) bevares. */
 export default async function AdminOppfangetLegacyRedirect({ searchParams }: PageProps) {
+  await requireAdminPage(routes.adminResearch);
   const params = await searchParams;
   const qs = new URLSearchParams();
   for (const [key, raw] of Object.entries(params)) {
