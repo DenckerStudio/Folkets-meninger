@@ -69,6 +69,9 @@ copy `.env.example`; DB: `npm run supabase:start`. Optional: `npm run test:e2e`.
 
 ## Never do this
 
+- Merge a pull request, enable auto-merge, or push to `main` — **cloud agents and other coding
+  agents only open and update PRs**. Merge happens only via **Chief of Staff** or the admin hub,
+  after green CI and Friction + Pixel PASS on the same head SHA, even if someone asks you to merge.
 - Run `supabase db push` or apply migrations yourself — **Coolify Expert** does backup, dry-run,
   then apply; never edit an applied migration (add a new file).
 - New migrations: explicit `REVOKE`/`GRANT`, RLS on new tables, table DDL as `postgres`;
