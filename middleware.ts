@@ -16,7 +16,12 @@ import {
   isPublicDashboardUtforskPath,
   routes,
 } from '@/lib/routes';
-import { refreshSessionCookies, resolveMiddlewareUser } from '@/lib/supabase-middleware';
+import { isAdminPath } from '@/lib/admin/nav';
+import {
+  isMiddlewareUserAdmin,
+  refreshSessionCookies,
+  resolveMiddlewareUser,
+} from '@/lib/supabase-middleware';
 import { trustedClientIp } from '@/lib/trusted-client-ip';
 
 async function applyRateLimit(request: NextRequest, pathname: string): Promise<NextResponse | null> {
@@ -85,7 +90,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const { user, response } = await resolveMiddlewareUser(request);
+  const { user, response, supabase } = await resolveMiddlewareUser(request);
   if (!user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = routes.login;
@@ -93,6 +98,16 @@ export async function middleware(request: NextRequest) {
     loginUrl.search = '';
     loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
+  }
+
+  if (isAdminPath(pathname)) {
+    const admin = await isMiddlewareUserAdmin(supabase, user.id);
+    if (!admin) {
+      const url = request.nextUrl.clone();
+      url.pathname = routes.utforsk;
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
   }
 
   return response;

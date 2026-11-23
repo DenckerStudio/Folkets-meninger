@@ -90,9 +90,34 @@ export async function refreshSessionCookies(
 
 export async function resolveMiddlewareUser(
   request: NextRequest,
-): Promise<{ user: User | null; response: NextResponse }> {
+): Promise<{
+  user: User | null;
+  response: NextResponse;
+  supabase: MiddlewareSupabaseClient;
+}> {
   const initialResponse = NextResponse.next({ request });
   const { supabase, getResponse } = createMiddlewareSupabaseClient(request, initialResponse);
   const user = await getUserWithTimeout(supabase);
-  return { user, response: getResponse() };
+  return { user, response: getResponse(), supabase };
+}
+
+/** RBAC admin check for edge middleware (uses the caller's JWT + user_roles RLS). */
+export async function isMiddlewareUserAdmin(
+  supabase: MiddlewareSupabaseClient,
+  userId: string,
+): Promise<boolean> {
+  if (!userId) return false;
+
+  try {
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'admin')
+      .maybeSingle();
+    if (error) return false;
+    return Boolean(data);
+  } catch {
+    return false;
+  }
 }

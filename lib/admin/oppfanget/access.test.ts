@@ -23,6 +23,7 @@ const adminLayout = readFileSync(
 );
 
 assert.match(researchPage, /await requireAdminPage\(routes\.adminResearch\)/);
+assert.match(legacyRedirect, /await requireAdminPage\(routes\.adminResearch\)/);
 assert.match(legacyRedirect, /permanentRedirect\(/);
 assert.match(legacyRedirect, /routes\.adminResearch/);
 assert.match(nextConfig, /\/dashboard\/admin\/oppfanget/);
