@@ -167,13 +167,20 @@ function StatTabPanel({
   }
 
   if (tab === 'feil') {
+    const appLoading = loadState.status === 'loading';
+    const appError = loadState.status === 'error';
+    const appReady =
+      loadState.status === 'ready' && Boolean(loadState.data.ready && loadState.data.traffic);
     const appErrors =
       loadState.status === 'ready' && loadState.data.ready && loadState.data.traffic
         ? loadState.data.traffic.topAppErrors
-        : null;
+        : [];
     return (
       <ErrorsPanel
         collectionEnabled={trafficCollectionEnabled}
+        appLoading={appLoading}
+        appError={appError}
+        appReady={appReady}
         appErrors={appErrors}
         edge={edgeState.status === 'ready' ? edgeState.data : null}
         edgeLoading={edgeState.status === 'loading'}
@@ -344,7 +351,9 @@ export default function AdminStatistikkClient({
                 VURDER_FOCUS_RING,
               )}
             >
-              Åpne detaljert trafikk i Umami ↗
+              Åpne detaljert trafikk i Umami
+              <span aria-hidden="true"> ↗</span>
+              <span className="sr-only"> (åpnes i ny fane)</span>
             </a>
           </p>
         ) : null}

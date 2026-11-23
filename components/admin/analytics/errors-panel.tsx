@@ -2,9 +2,14 @@ import type { AdminAnalyticsOverview } from '@/lib/admin/analytics/overview';
 import type { AdminHttpErrorsOverview } from '@/lib/admin/analytics/http-errors';
 import { AnalyticsCollectionDisabled } from '@/components/admin/analytics/analytics-collection-disabled';
 
+type AppErrorRow = NonNullable<AdminAnalyticsOverview['traffic']>['topAppErrors'][number];
+
 type ErrorsPanelProps = {
   collectionEnabled: boolean;
-  appErrors: NonNullable<AdminAnalyticsOverview['traffic']>['topAppErrors'] | null;
+  appLoading: boolean;
+  appError: boolean;
+  appReady: boolean;
+  appErrors: AppErrorRow[];
   edge: AdminHttpErrorsOverview | null;
   edgeLoading: boolean;
   edgeError: boolean;
@@ -12,6 +17,9 @@ type ErrorsPanelProps = {
 
 export function ErrorsPanel({
   collectionEnabled,
+  appLoading,
+  appError,
+  appReady,
   appErrors,
   edge,
   edgeLoading,
@@ -21,20 +29,20 @@ export function ErrorsPanel({
     <div className="space-y-8">
       <section className="space-y-3">
         <div>
-          <h2 className="text-base font-semibold text-foreground">Fra edge (Traefik)</h2>
+          <h2 className="text-base font-semibold text-foreground">Fra serveren</h2>
           <p className="text-sm text-muted-foreground">
             Aggregerte statuskoder fra tilgangslogger. Inkluderer crawlere med mindre de er merket
-            som bot. Tomt til aggregat-jobben er satt opp.
+            som bot.
           </p>
         </div>
         {edgeLoading ? (
           <p className="text-sm text-muted-foreground" role="status">
-            Laster edge-statistikk …
+            Laster serverstatistikk …
           </p>
         ) : null}
         {edgeError ? (
           <p className="text-sm text-destructive" role="alert">
-            Kunne ikke laste edge-statistikk.
+            Kunne ikke laste serverstatistikk.
           </p>
         ) : null}
         {edge && !edge.ready ? (
@@ -42,19 +50,20 @@ export function ErrorsPanel({
             className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-foreground"
             role="status"
           >
-            HTTP-feilaggregater er ikke klare i databasen ennå. Coolify Expert må kjøre migrasjonen
-            og starte logg-jobben før tallene vises her.
+            Feilstatistikk fra serveren er ikke satt opp ennå.
           </p>
         ) : null}
         {edge?.ready ? (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Feilforespørsler siste {edge.days} dager: {edge.errorRowCountHuman.toLocaleString('nb-NO')}{' '}
-              (menneskelig) · {edge.errorRowCountBot.toLocaleString('nb-NO')} (bot)
+              Feilforespørsler siste {edge.days} dager:{' '}
+              {edge.errorRowCountHuman.toLocaleString('nb-NO')} (menneskelig) ·{' '}
+              {edge.errorRowCountBot.toLocaleString('nb-NO')} (bot)
             </p>
             {edge.statusClasses.length > 0 ? (
               <div className="overflow-x-auto rounded-xl border border-border">
                 <table className="min-w-full text-sm">
+                  <caption className="sr-only">Statusklasser fra serveren</caption>
                   <thead>
                     <tr className="border-b border-border bg-muted/40 text-left">
                       <th scope="col" className="px-4 py-2.5 font-medium text-muted-foreground">
@@ -82,13 +91,13 @@ export function ErrorsPanel({
               </div>
             ) : (
               <p className="text-sm text-muted-foreground" role="status">
-                Ingen edge-rader ennå.
+                Ingen serverrader ennå.
               </p>
             )}
             {edge.top404.length > 0 ? (
               <div className="overflow-x-auto rounded-xl border border-border">
                 <table className="min-w-full text-sm">
-                  <caption className="sr-only">Topp 404 fra Traefik</caption>
+                  <caption className="sr-only">Topp 404 fra serveren</caption>
                   <thead>
                     <tr className="border-b border-border bg-muted/40 text-left">
                       <th scope="col" className="px-4 py-2.5 font-medium text-muted-foreground">
@@ -132,19 +141,38 @@ export function ErrorsPanel({
         <div>
           <h2 className="text-base font-semibold text-foreground">Fra app</h2>
           <p className="text-sm text-muted-foreground">
-            Anonyme <code className="text-xs">http_error</code>-hendelser fra 404-sider og utvalgte
-            API-ruter. Dekker ikke all edge-trafikk.
+            Anonyme feilhendelser fra 404-sider og utvalgte API-ruter. Dekker ikke all
+            servertrafikk.
           </p>
         </div>
         {!collectionEnabled ? <AnalyticsCollectionDisabled /> : null}
-        {collectionEnabled && (!appErrors || appErrors.length === 0) ? (
+        {collectionEnabled && appLoading ? (
+          <p className="text-sm text-muted-foreground" role="status">
+            Laster app-feil …
+          </p>
+        ) : null}
+        {collectionEnabled && appError ? (
+          <p className="text-sm text-destructive" role="alert">
+            Kunne ikke laste app-feil.
+          </p>
+        ) : null}
+        {collectionEnabled && !appLoading && !appError && !appReady ? (
+          <p
+            className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-foreground"
+            role="status"
+          >
+            App-feilstatistikk er ikke klar i databasen ennå.
+          </p>
+        ) : null}
+        {collectionEnabled && appReady && appErrors.length === 0 ? (
           <p className="text-sm text-muted-foreground" role="status">
             Ingen app-feil registrert siste 30 dager.
           </p>
         ) : null}
-        {collectionEnabled && appErrors && appErrors.length > 0 ? (
+        {collectionEnabled && appReady && appErrors.length > 0 ? (
           <div className="overflow-x-auto rounded-xl border border-border">
             <table className="min-w-full text-sm">
+              <caption className="sr-only">Topp app-feil siste 30 dager</caption>
               <thead>
                 <tr className="border-b border-border bg-muted/40 text-left">
                   <th scope="col" className="px-4 py-2.5 font-medium text-muted-foreground">
