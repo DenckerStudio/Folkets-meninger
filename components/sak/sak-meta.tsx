@@ -40,7 +40,9 @@ export function SakMetaCard({ icon, label, tooltipKey, children }: SakMetaCardPr
         showTooltip={showTooltips}
         className="min-w-0 flex-1"
       >
-        <div className="text-sm font-semibold break-words text-foreground">{children}</div>
+        <div lang="nb" className="text-sm font-semibold break-words hyphens-auto text-foreground">
+          {children}
+        </div>
       </LabeledWithTooltip>
     </div>
   );

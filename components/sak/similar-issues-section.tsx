@@ -1,15 +1,13 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { SakSectionHeading } from '@/components/sak/sak-meta';
-import {
-  fetchSimilarSaker,
-  shouldShowSimilarSakerSection,
-  type SimilarSakListItem,
-} from '@/lib/sak/similar-issues';
 import { dedupeSimilarSaker } from '@/lib/sak/similar-issues-dedupe';
 import { buildSimilarSakReasons, type SimilarSakFacets } from '@/lib/sak/similar-issues-labels';
+import type { SimilarSakerLoadResult } from '@/lib/sak/similar-issues-load';
+import type { SimilarSakListItem } from '@/lib/sak/similar-issues';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
+import { SimilarIssuesSectionClient } from '@/components/sak/similar-issues-section-client';
 
 function SimilarSakRow({
   item,
@@ -64,26 +62,43 @@ export function SimilarSakList({
   );
 }
 
-export async function SimilarIssuesSection({
+export function prepareSimilarIssuesSectionInitialState(
+  initialLoad: SimilarSakerLoadResult,
+  sakId: string,
+  excludeIssueIds: readonly string[],
+): { initialItems: SimilarSakListItem[]; initialStatus: 'ok' | 'error' } {
+  if (initialLoad.status === 'error') {
+    return { initialItems: [], initialStatus: 'error' };
+  }
+  return {
+    initialItems: dedupeSimilarSaker(initialLoad.items, sakId, excludeIssueIds),
+    initialStatus: 'ok',
+  };
+}
+
+export function SimilarIssuesSection({
   sakId,
   excludeIssueIds = [],
   current = null,
+  initialLoad,
 }: {
   sakId: string;
   excludeIssueIds?: readonly string[];
   current?: SimilarSakFacets | null;
+  initialLoad: SimilarSakerLoadResult;
 }) {
-  let items: SimilarSakListItem[] = [];
-  try {
-    items = await fetchSimilarSaker(sakId);
-    items = dedupeSimilarSaker(items, sakId, excludeIssueIds);
-  } catch {
-    items = [];
-  }
+  const { initialItems, initialStatus } = prepareSimilarIssuesSectionInitialState(
+    initialLoad,
+    sakId,
+    excludeIssueIds,
+  );
 
-  if (!shouldShowSimilarSakerSection(items)) {
-    return null;
-  }
-
-  return <SimilarSakList items={items} current={current} />;
+  return (
+    <SimilarIssuesSectionClient
+      sakId={sakId}
+      initialItems={initialItems}
+      initialStatus={initialStatus}
+      current={current}
+    />
+  );
 }
