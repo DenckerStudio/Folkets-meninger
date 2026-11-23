@@ -1,3 +1,4 @@
+import { githubConditionalJsonGet } from '@/lib/admin/local-ai-hub/github-conditional-json-get';
 import { parseGithubLinkNext } from '@/lib/admin/local-ai-hub/github-link';
 import { LOCAL_AI_FETCH_TIMEOUT_MS } from '@/lib/admin/local-ai-hub/labels';
 
@@ -32,23 +33,39 @@ export type GithubIssueComment = {
   user?: { login?: string } | null;
 };
 
+function githubAuthHeaders(opts: GithubClientOptions, extra?: HeadersInit): Record<string, string> {
+  return {
+    Authorization: `Bearer ${opts.token}`,
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    ...(extra as Record<string, string> | undefined),
+  };
+}
+
 async function githubFetch<T>(
   opts: GithubClientOptions,
   path: string,
   init?: RequestInit,
 ): Promise<{ ok: true; data: T } | { ok: false; error: string; status?: number }> {
+  const method = init?.method ?? 'GET';
   const url = path.startsWith('https://')
     ? path
     : `https://api.github.com${path.startsWith('/') ? path : `/${path}`}`;
+  if (method === 'GET') {
+    const conditional = await githubConditionalJsonGet<T>({
+      url,
+      method: 'GET',
+      headers: githubAuthHeaders(opts, init?.headers),
+      signal: AbortSignal.timeout(LOCAL_AI_FETCH_TIMEOUT_MS),
+    });
+    if (!conditional.ok) return conditional;
+    return { ok: true, data: conditional.data };
+  }
+
   try {
     const res = await fetch(url, {
       ...init,
-      headers: {
-        Authorization: `Bearer ${opts.token}`,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        ...init?.headers,
-      },
+      headers: githubAuthHeaders(opts, init?.headers),
       signal: AbortSignal.timeout(LOCAL_AI_FETCH_TIMEOUT_MS),
       cache: 'no-store',
     });
@@ -103,28 +120,22 @@ export async function listPullComments(
 
   try {
     while (url && pages < MAX_ISSUE_COMMENT_PAGES) {
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${opts.token}`,
-          Accept: 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-        },
+      const pageResult = await githubConditionalJsonGet<GithubIssueComment[]>({
+        url,
+        headers: githubAuthHeaders(opts),
         signal: AbortSignal.timeout(LOCAL_AI_FETCH_TIMEOUT_MS),
-        cache: 'no-store',
       });
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
+      if (!pageResult.ok) {
         return {
           ok: false,
-          error: text || `GitHub svarte med HTTP ${res.status}`,
+          error: pageResult.error,
         };
       }
-      const page = (await res.json()) as GithubIssueComment[];
+      const page = pageResult.data;
       if (Array.isArray(page)) {
         comments.push(...page);
       }
-      url = parseGithubLinkNext(res.headers.get('link'));
+      url = parseGithubLinkNext(pageResult.linkHeader);
       pages += 1;
     }
     return { ok: true, comments };

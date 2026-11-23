@@ -14,44 +14,24 @@ import { computeMergeEligibility, type MergeEligibility } from '@/lib/admin/loca
 import { collectTaskTextParts, resolvePrLinkFromTask } from '@/lib/admin/local-ai-hub/pr-link';
 import { parseVerdictsFromComments, type ReviewVerdictOutcome } from '@/lib/admin/local-ai-hub/verdict-parser';
 import { listProjectTasks, type VikunjaTask } from '@/lib/admin/local-ai-hub/vikunja-client';
+import {
+  mergeInactiveFinishedRowFromCache,
+  readInactiveFinishedRowCache,
+  writeInactiveFinishedRowCache,
+} from '@/lib/admin/local-ai-hub/inactive-finished-row-cache';
+import { shouldSkipPullGithubEnrichment } from '@/lib/admin/local-ai-hub/pull-enrichment';
 import { shortenUpstreamError } from '@/lib/admin/local-ai-hub/upstream-errors';
 
-export type LocalAiFinishedRow = {
-  taskId: number;
-  title: string;
-  failed: boolean;
-  failureComment: string | null;
-  pr: {
-    number: number;
-    url: string;
-    state: string;
-    merged: boolean;
-    headSha: string;
-    headRef: string;
-    mergeable: boolean | null;
-  } | null;
-  prError: string | null;
-  ci: CiRollup | null;
-  ciError: string | null;
-  pixel: ReviewVerdictOutcome;
-  friction: ReviewVerdictOutcome;
-  merge: MergeEligibility;
-};
-
-export type LocalAiSuggestionRow = {
-  taskId: number;
-  title: string;
-  description: string;
-};
-
-export type LocalAiOverviewResult =
-  | { ok: false; kind: 'config'; missing: string[] }
-  | {
-      ok: true;
-      ferdig: LocalAiFinishedRow[];
-      forslag: LocalAiSuggestionRow[];
-      partialErrors: string[];
-    };
+export type {
+  LocalAiFinishedRow,
+  LocalAiOverviewResult,
+  LocalAiSuggestionRow,
+} from '@/lib/admin/local-ai-hub/overview-types';
+import type {
+  LocalAiFinishedRow,
+  LocalAiOverviewResult,
+  LocalAiSuggestionRow,
+} from '@/lib/admin/local-ai-hub/overview-types';
 
 async function enrichPullRow(
   config: Extract<LocalAiHubConfig, { ok: true }>,
@@ -82,6 +62,11 @@ async function enrichPullRow(
     friction: 'unknown',
     merge: { canMerge: false, reasons: ['Fant ingen tilknyttet pull request'] },
   };
+
+  const inactiveCached = readInactiveFinishedRowCache(task.id);
+  if (inactiveCached) {
+    return mergeInactiveFinishedRowFromCache(inactiveCached, task, failed, failureComment);
+  }
 
   const link = resolvePrLinkFromTask(task.id, text);
   if (!link) {
@@ -133,14 +118,27 @@ async function enrichPullRow(
     mergeable: pull.mergeable,
   };
 
+  let ci: CiRollup | null = null;
+  let ciError: string | null = null;
+  let pixel: ReviewVerdictOutcome = 'unknown';
+  let friction: ReviewVerdictOutcome = 'unknown';
+
+  if (shouldSkipPullGithubEnrichment(pull)) {
+    base.ci = ci;
+    base.ciError = ciError;
+    base.pixel = pixel;
+    base.friction = friction;
+    base.merge = computeMergeEligibility({ pull, ci, pixel, friction });
+    writeInactiveFinishedRowCache(task.id, base);
+    return base;
+  }
+
   const ghOpts = { token: config.githubToken, owner: link.owner, repo: link.repo };
   const [ciSettled, commentsSettled] = await Promise.allSettled([
     fetchCiForSha(ghOpts, pull.head.sha),
     listPullComments(ghOpts, pull.number),
   ]);
 
-  let ci: CiRollup | null = null;
-  let ciError: string | null = null;
   if (ciSettled.status === 'fulfilled') {
     if (ciSettled.value.ok) {
       ci = rollupCi(ciSettled.value);
@@ -153,8 +151,6 @@ async function enrichPullRow(
   base.ci = ci;
   base.ciError = ciError;
 
-  let pixel: ReviewVerdictOutcome = 'unknown';
-  let friction: ReviewVerdictOutcome = 'unknown';
   if (commentsSettled.status === 'fulfilled' && commentsSettled.value.ok) {
     const parsed = parseVerdictsFromComments(
       commentsSettled.value.comments.map((c) => ({

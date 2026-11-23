@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { requireAdminPage } from '@/lib/admin/gate';
 import { isAdminLocalAiHubEnabled } from '@/lib/admin/local-ai-hub/flags';
-import { loadLocalAiOverview } from '@/lib/admin/local-ai-hub/overview';
+import { loadLocalAiOverviewCached } from '@/lib/admin/local-ai-hub/overview-cache';
 import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
@@ -35,7 +35,7 @@ export default async function AdminOppgaverPage({ searchParams }: PageProps) {
   }
 
   if (isAdminLocalAiHubEnabled()) {
-    const initial = await loadLocalAiOverview();
+    const { result: initial } = await loadLocalAiOverviewCached();
     return (
       <Suspense fallback={<LocalAiHubPageSkeleton />}>
         <AdminLocalAiHubClient initial={initial} />
