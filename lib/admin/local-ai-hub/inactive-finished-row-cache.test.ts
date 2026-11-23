@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 
 import {
+  buildInactiveFinishedRowCacheKey,
   clearInactiveFinishedRowCacheForTests,
   isPermanentlyCacheableFinishedRow,
   mergeInactiveFinishedRowFromCache,
@@ -8,6 +9,7 @@ import {
   writeInactiveFinishedRowCache,
 } from '@/lib/admin/local-ai-hub/inactive-finished-row-cache';
 import type { LocalAiFinishedRow } from '@/lib/admin/local-ai-hub/overview-types';
+import type { ResolvedTaskPrLink } from '@/lib/admin/local-ai-hub/pr-link';
 
 function row(overrides: Partial<LocalAiFinishedRow>): LocalAiFinishedRow {
   return {
@@ -34,12 +36,42 @@ function row(overrides: Partial<LocalAiFinishedRow>): LocalAiFinishedRow {
   };
 }
 
+const linkPr10: ResolvedTaskPrLink = {
+  mode: 'url',
+  owner: 'DenckerStudio',
+  repo: 'Folkets-meninger',
+  number: 10,
+  url: 'https://github.com/DenckerStudio/Folkets-meninger/pull/10',
+};
+
+const linkPr11: ResolvedTaskPrLink = {
+  mode: 'url',
+  owner: 'DenckerStudio',
+  repo: 'Folkets-meninger',
+  number: 11,
+  url: 'https://github.com/DenckerStudio/Folkets-meninger/pull/11',
+};
+
+const linkBranch: ResolvedTaskPrLink = {
+  mode: 'branch',
+  owner: 'DenckerStudio',
+  repo: 'Folkets-meninger',
+  branch: 'cursor/task-42-foo',
+};
+
 clearInactiveFinishedRowCacheForTests();
 assert.equal(isPermanentlyCacheableFinishedRow(row({ pr: { ...row({}).pr!, state: 'open', merged: false } })), false);
 assert.equal(isPermanentlyCacheableFinishedRow(row({})), true);
 
-writeInactiveFinishedRowCache(42, row({ taskId: 42 }));
-assert.ok(readInactiveFinishedRowCache(42));
+assert.notEqual(
+  buildInactiveFinishedRowCacheKey(42, linkPr10),
+  buildInactiveFinishedRowCacheKey(42, linkPr11),
+);
+
+writeInactiveFinishedRowCache(42, linkPr10, row({ taskId: 42, pr: { ...row({}).pr!, number: 10 } }));
+assert.ok(readInactiveFinishedRowCache(42, linkPr10));
+assert.equal(readInactiveFinishedRowCache(42, linkPr11), null);
+assert.equal(readInactiveFinishedRowCache(42, linkBranch), null);
 
 const merged = mergeInactiveFinishedRowFromCache(row({ taskId: 42 }), { id: 42, title: 'Ny tittel' }, true, 'feil');
 assert.equal(merged.title, 'Ny tittel');

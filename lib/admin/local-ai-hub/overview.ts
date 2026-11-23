@@ -63,15 +63,15 @@ async function enrichPullRow(
     merge: { canMerge: false, reasons: ['Fant ingen tilknyttet pull request'] },
   };
 
-  const inactiveCached = readInactiveFinishedRowCache(task.id);
-  if (inactiveCached) {
-    return mergeInactiveFinishedRowFromCache(inactiveCached, task, failed, failureComment);
-  }
-
   const link = resolvePrLinkFromTask(task.id, text);
   if (!link) {
     base.prError = 'Fant ingen branch eller PR-lenke i oppgaven';
     return base;
+  }
+
+  const inactiveCached = readInactiveFinishedRowCache(task.id, link);
+  if (inactiveCached) {
+    return mergeInactiveFinishedRowFromCache(inactiveCached, task, failed, failureComment);
   }
 
   let pull: GithubPull | null = null;
@@ -129,7 +129,7 @@ async function enrichPullRow(
     base.pixel = pixel;
     base.friction = friction;
     base.merge = computeMergeEligibility({ pull, ci, pixel, friction });
-    writeInactiveFinishedRowCache(task.id, base);
+    writeInactiveFinishedRowCache(task.id, link, base);
     return base;
   }
 

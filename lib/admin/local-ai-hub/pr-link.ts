@@ -58,10 +58,16 @@ export function findPrUrlInText(text: string): ResolvedPrLink | null {
   };
 }
 
-export function resolvePrLinkFromTask(
-  taskId: number,
-  text: string,
-): { mode: 'branch' | 'url'; branch?: string; owner: string; repo: string; number?: number; url?: string } | null {
+export type ResolvedTaskPrLink = {
+  mode: 'branch' | 'url';
+  branch?: string;
+  owner: string;
+  repo: string;
+  number?: number;
+  url?: string;
+};
+
+export function resolvePrLinkFromTask(taskId: number, text: string): ResolvedTaskPrLink | null {
   const branch = findBranchInTaskText(taskId, text);
   if (branch) {
     return {
