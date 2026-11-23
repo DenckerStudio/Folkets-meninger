@@ -199,7 +199,6 @@ html[data-site-chrome-variant='app'] {
     }
   html {
     @apply font-sans;
-    scroll-padding-top: var(--site-header-height);
     }
 }
 
