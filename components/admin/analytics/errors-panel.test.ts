@@ -23,6 +23,9 @@ assert.match(panel, /caption className="sr-only">Statusklasser fra serveren/);
 assert.match(panel, /caption className="sr-only">5xx per dag fra serveren/);
 assert.match(panel, /caption className="sr-only">Topp app-feil siste 30 dager/);
 assert.match(panel, /fiveXxByDay/);
+assert.match(panel, /formatBucketDateNb/);
+assert.match(panel, /Ingen rader fra serveren ennå/);
+assert.doesNotMatch(panel, /Ingen serverrader ennå/);
 assert.doesNotMatch(panel, /Fra edge \(Traefik\)/);
 assert.doesNotMatch(panel, /Coolify Expert/);
 

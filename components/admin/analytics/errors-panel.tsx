@@ -4,6 +4,24 @@ import { AnalyticsCollectionDisabled } from '@/components/admin/analytics/analyt
 
 type AppErrorRow = NonNullable<AdminAnalyticsOverview['traffic']>['topAppErrors'][number];
 
+function formatBucketDateNb(raw: string): string {
+  const trimmed = raw.trim();
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
+  if (!match) {
+    return trimmed;
+  }
+  const isoDay = `${match[1]}-${match[2]}-${match[3]}T12:00:00`;
+  const date = new Date(isoDay);
+  if (Number.isNaN(date.getTime())) {
+    return trimmed;
+  }
+  return date.toLocaleDateString('nb-NO', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 type ErrorsPanelProps = {
   collectionEnabled: boolean;
   appLoading: boolean;
@@ -91,7 +109,7 @@ export function ErrorsPanel({
               </div>
             ) : (
               <p className="text-sm text-muted-foreground" role="status">
-                Ingen serverrader ennå.
+                Ingen rader fra serveren ennå.
               </p>
             )}
             {edge.fiveXxByDay.length > 0 ? (
@@ -114,7 +132,9 @@ export function ErrorsPanel({
                   <tbody>
                     {edge.fiveXxByDay.map((row) => (
                       <tr key={row.bucketDate} className="border-b border-border last:border-0">
-                        <td className="px-4 py-2.5 text-foreground">{row.bucketDate}</td>
+                        <td className="px-4 py-2.5 text-foreground">
+                          {formatBucketDateNb(row.bucketDate)}
+                        </td>
                         <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
                           {row.requestCount.toLocaleString('nb-NO')}
                         </td>
