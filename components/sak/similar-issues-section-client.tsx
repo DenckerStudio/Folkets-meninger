@@ -132,7 +132,7 @@ export function SimilarIssuesSectionClient({
     return (
       <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
         <SakSectionHeading title="Liknende saker" icon="file-text" iconClassName="w-5 h-5 text-brand" />
-        <p className="mt-4 inline-flex items-center gap-2 text-sm text-muted-foreground">
+        <p className="mt-4 inline-flex items-center gap-2 text-sm text-muted-foreground" role="status">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
           Henter liknende saker …
         </p>
