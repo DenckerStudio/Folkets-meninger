@@ -33,7 +33,7 @@ export function LandingRoadmap({
 
   if (sorted.length === 0) {
     return (
-      <div id="veien-videre" className="scroll-mt-28">
+      <div id="veien-videre" className="scroll-mt-site-header">
         <EmptyLineState className="py-12 text-muted-foreground">
           Veikartet er tomt ennå.
         </EmptyLineState>
@@ -51,7 +51,7 @@ export function LandingRoadmap({
   }));
 
   return (
-    <div id="veien-videre" className="scroll-mt-28">
+    <div id="veien-videre" className="scroll-mt-site-header">
       <Timeline
         title="Veien videre"
         subtitle="Hva som er live, og hva som kommer."

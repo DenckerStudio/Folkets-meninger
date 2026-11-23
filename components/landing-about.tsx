@@ -75,7 +75,7 @@ export function LandingAbout() {
 
   return (
     <LandingSectionContainer>
-      <section id="om-oss" className="scroll-mt-28">
+      <section id="om-oss" className="scroll-mt-site-header">
         <div className="mx-auto max-w-3xl text-center">
           <SoftBlurIn>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-accent">Om oss</p>
@@ -231,7 +231,7 @@ export function LandingAbout() {
           <LandingFaqAccordion items={OM_FAQ} />
         </SectionBlock>
 
-        <div id="om-kontakt" className="mt-20 scroll-mt-28 border-t border-[#00205b]/10 pt-16">
+        <div id="om-kontakt" className="mt-20 scroll-mt-site-header border-t border-[#00205b]/10 pt-16">
           <SoftBlurIn>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-accent">Kontakt</p>
             <h3 className="mt-3 text-2xl font-bold text-foreground">Gi innspill</h3>

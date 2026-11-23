@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, type KeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { applyMeasuredSakPageTabsHeight, clearSakPageTabsStickyHeight } from '@/lib/layout/site-chrome-css';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { AnimatedTabs } from '@/components/ui/animated-tabs';
@@ -65,6 +66,29 @@ export function SakPageTabs({
   const router = useRouter();
   const searchParams = useSearchParams();
   const reducedMotion = usePrefersReducedMotion();
+  const stickyTabsRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const node = stickyTabsRef.current;
+    if (!node) {
+      clearSakPageTabsStickyHeight(root);
+      return undefined;
+    }
+
+    const update = () => {
+      applyMeasuredSakPageTabsHeight(root, node.getBoundingClientRect().height);
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(node);
+
+    return () => {
+      ro.disconnect();
+      clearSakPageTabsStickyHeight(root);
+    };
+  }, []);
 
   const tabOrder = useMemo(() => visibleSakPageTabIds(hiddenTabIds), [hiddenTabIds]);
 
@@ -160,7 +184,8 @@ export function SakPageTabs({
   return (
     <div className="space-y-6">
       <nav
-        className="sticky top-[calc(4rem+env(safe-area-inset-top,0px))] z-30 -mx-4 overflow-x-auto border-b border-border bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:mx-0 sm:px-0"
+        ref={stickyTabsRef}
+        className="sticky-below-site-header z-30 -mx-4 overflow-x-auto border-b border-border bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:mx-0 sm:px-0"
         aria-label="Saksseksjoner"
         onKeyDown={onTabKeyDown}
       >

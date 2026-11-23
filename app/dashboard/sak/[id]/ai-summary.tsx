@@ -262,7 +262,7 @@ export default function AiSummary({
   const showLead = Boolean(lead) && !isSummaryLeadAlreadyShown(lead, leadShownAbove);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="scroll-mt-site-header flex flex-wrap items-center gap-2">
       <span
         className="inline-flex items-center rounded-full border border-[#ba0c2f]/25 bg-[#ba0c2f]/[0.06] px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#ba0c2f]"
       >

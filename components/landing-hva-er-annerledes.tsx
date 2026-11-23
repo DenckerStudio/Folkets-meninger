@@ -69,7 +69,7 @@ export function LandingHvaErAnnerledes() {
 
   return (
     <LandingSectionContainer>
-      <section id="hva-er-annerledes" className="scroll-mt-28">
+      <section id="hva-er-annerledes" className="scroll-mt-site-header">
         <div className="mx-auto max-w-3xl text-center">
           <SoftBlurIn>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-accent">Slik skiller vi oss ut</p>

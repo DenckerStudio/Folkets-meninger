@@ -420,7 +420,7 @@ export default async function SakPage({
             {detailedContent ? (
               <div
                 id="sak-oversikt-metadata"
-                className="scroll-mt-32 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                className="scroll-mt-below-sak-tabs grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
               >
                 {sakNummer && sakSesjon ? (
                   <SakMetaCard icon="file-text" label="Saksnummer" tooltipKey="saksnummer">
@@ -456,7 +456,7 @@ export default async function SakPage({
             {innstillingstekst ? (
               <div
                 id="sak-oversikt-innstilling"
-                className="scroll-mt-32 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6"
+                className="scroll-mt-below-sak-tabs rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6"
               >
                 <SakSectionHeading
                   title="Komiteens innstilling (Stortinget)"
@@ -475,7 +475,7 @@ export default async function SakPage({
             {forslagstillere.length > 0 ? (
               <div
                 id="sak-oversikt-forslagstillere"
-                className="scroll-mt-32 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6"
+                className="scroll-mt-below-sak-tabs rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6"
               >
                 <SakSectionHeading
                   title="Forslagstillere"
@@ -535,7 +535,7 @@ export default async function SakPage({
             {saksordfoerere.length > 0 ? (
               <div
                 id="sak-oversikt-ordforer"
-                className="scroll-mt-32 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6"
+                className="scroll-mt-below-sak-tabs rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6"
               >
                 <SakSectionHeading
                   title="Saksordførere"
@@ -602,7 +602,7 @@ export default async function SakPage({
             />
 
             {showRelatertAnchor ? (
-              <div id={SAK_OVERSIKT_RELATERT_ANCHOR_ID} className="scroll-mt-32 space-y-6">
+              <div id={SAK_OVERSIKT_RELATERT_ANCHOR_ID} className="scroll-mt-below-sak-tabs space-y-6">
                 {relaterteSaker.length > 0 ? (
                   <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
                     <h2 className="mb-4 text-lg font-bold text-foreground">Relaterte saker</h2>

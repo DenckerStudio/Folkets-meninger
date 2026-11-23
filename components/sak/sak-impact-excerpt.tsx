@@ -15,7 +15,7 @@ export function SakImpactExcerpt({ sakId }: { sakId: string }) {
   return (
     <section
       id="sak-oversikt-konsekvens"
-      className="scroll-mt-28 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6"
+      className="scroll-mt-below-sak-tabs rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6"
       aria-labelledby="sak-impact-excerpt-heading"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
