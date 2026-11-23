@@ -34,6 +34,7 @@ export default function GlobalError({
             >
               Prøv igjen
             </button>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- rot-layouten kan være nede, så vanlig <a> er riktig her */}
             <a
               href="/"
               className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#00205b]/20 px-5 text-sm font-semibold text-[#00205b] hover:bg-[#00205b]/5"
