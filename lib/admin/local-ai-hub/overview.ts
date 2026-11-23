@@ -14,6 +14,11 @@ import { computeMergeEligibility, type MergeEligibility } from '@/lib/admin/loca
 import { collectTaskTextParts, resolvePrLinkFromTask } from '@/lib/admin/local-ai-hub/pr-link';
 import { parseVerdictsFromComments, type ReviewVerdictOutcome } from '@/lib/admin/local-ai-hub/verdict-parser';
 import { listProjectTasks, type VikunjaTask } from '@/lib/admin/local-ai-hub/vikunja-client';
+import {
+  mergeInactiveFinishedRowFromCache,
+  readInactiveFinishedRowCache,
+  writeInactiveFinishedRowCache,
+} from '@/lib/admin/local-ai-hub/inactive-finished-row-cache';
 import { shouldSkipPullGithubEnrichment } from '@/lib/admin/local-ai-hub/pull-enrichment';
 import { shortenUpstreamError } from '@/lib/admin/local-ai-hub/upstream-errors';
 
@@ -57,6 +62,11 @@ async function enrichPullRow(
     friction: 'unknown',
     merge: { canMerge: false, reasons: ['Fant ingen tilknyttet pull request'] },
   };
+
+  const inactiveCached = readInactiveFinishedRowCache(task.id);
+  if (inactiveCached) {
+    return mergeInactiveFinishedRowFromCache(inactiveCached, task, failed, failureComment);
+  }
 
   const link = resolvePrLinkFromTask(task.id, text);
   if (!link) {
@@ -119,6 +129,7 @@ async function enrichPullRow(
     base.pixel = pixel;
     base.friction = friction;
     base.merge = computeMergeEligibility({ pull, ci, pixel, friction });
+    writeInactiveFinishedRowCache(task.id, base);
     return base;
   }
 

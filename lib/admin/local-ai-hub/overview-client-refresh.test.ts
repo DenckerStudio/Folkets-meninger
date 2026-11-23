@@ -41,5 +41,13 @@ const overviewSource = readFileSync(
 );
 
 assert.match(overviewSource, /shouldSkipPullGithubEnrichment/);
+assert.match(overviewSource, /readInactiveFinishedRowCache/);
+
+const githubHttpSource = readFileSync(
+  join(process.cwd(), 'lib/admin/local-ai-hub/github-http.ts'),
+  'utf8',
+);
+
+assert.match(githubHttpSource, /githubConditionalJsonGet/);
 
 console.log('lib/admin/local-ai-hub/overview-client-refresh.test.ts: ok');
