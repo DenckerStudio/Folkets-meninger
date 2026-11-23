@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
+import {
+  ABOUT_BLOG_SUGGESTION_CONSUMED_MESSAGE,
+  ABOUT_BLOG_SUGGESTION_PICKED_MESSAGE,
+  shouldShowAboutSuggestionsEmptyState,
+} from '@/lib/admin/about-blog-panels';
 import { cn } from '@/lib/utils';
 
 export type AboutSuggestionChoice = {
@@ -56,10 +61,21 @@ function notesFrom(body: SuggestionsPayload): string[] {
   return body.notes.filter((note): note is string => typeof note === 'string' && note.trim().length > 0);
 }
 
+export type AboutSuggestionDraftOutcome = {
+  suggestionKey: string;
+  ok: boolean;
+};
+
 export function AboutBlogSuggestionsPanel({
   onUse,
+  draftOutcome = null,
+  onDraftOutcomeHandled,
+  clearUsedMessageSignal = 0,
 }: {
   onUse: (suggestion: AboutSuggestionChoice) => void;
+  draftOutcome?: AboutSuggestionDraftOutcome | null;
+  onDraftOutcomeHandled?: () => void;
+  clearUsedMessageSignal?: number;
 }) {
   const [suggestions, setSuggestions] = useState<SuggestionCard[]>([]);
   const [notes, setNotes] = useState<string[]>([]);
@@ -82,20 +98,29 @@ export function AboutBlogSuggestionsPanel({
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
       const res = await fetch('/api/admin/blog/suggestions', { cache: 'no-store' });
       const body = (await res.json().catch(() => ({}))) as SuggestionsPayload;
       if (!res.ok) {
+        setSuggestions([]);
+        setHasHistory(false);
         if (body.error === 'table_missing' && typeof body.message === 'string') {
           setTableMessage(body.message);
+          setError('');
         } else {
+          setTableMessage('');
           setError(typeof body.message === 'string' ? body.message : 'Kunne ikke hente forslagene.');
         }
         return;
       }
       setTableMessage('');
+      setError('');
       applyPayload(body);
     } catch {
+      setSuggestions([]);
+      setHasHistory(false);
+      setTableMessage('');
       setError('Kunne ikke hente forslagene.');
     } finally {
       setLoading(false);
@@ -105,6 +130,23 @@ export function AboutBlogSuggestionsPanel({
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!draftOutcome) return;
+    if (draftOutcome.ok) {
+      setSuggestions((current) => current.filter((row) => row.key !== draftOutcome.suggestionKey));
+      setUsedMessage(ABOUT_BLOG_SUGGESTION_CONSUMED_MESSAGE);
+      void load();
+    } else {
+      setUsedMessage('');
+    }
+    onDraftOutcomeHandled?.();
+  }, [draftOutcome, load, onDraftOutcomeHandled]);
+
+  useEffect(() => {
+    if (clearUsedMessageSignal === 0) return;
+    setUsedMessage('');
+  }, [clearUsedMessageSignal]);
 
   const refresh = async () => {
     if (refreshing || pendingKey) return;
@@ -135,7 +177,14 @@ export function AboutBlogSuggestionsPanel({
     }
   };
 
-  const act = async (action: 'use' | 'dismiss' | 'snooze', item: SuggestionCard) => {
+  const pick = (item: SuggestionCard) => {
+    if (busy) return;
+    onUse({ key: item.key, title: item.title, angle: item.angle });
+    setUsedMessage(ABOUT_BLOG_SUGGESTION_PICKED_MESSAGE);
+    setError('');
+  };
+
+  const act = async (action: 'dismiss' | 'snooze', item: SuggestionCard) => {
     if (pendingKey || refreshing) return;
     setPendingKey(item.key);
     setError('');
@@ -156,10 +205,6 @@ export function AboutBlogSuggestionsPanel({
         return;
       }
       setSuggestions((current) => current.filter((row) => row.key !== item.key));
-      if (action === 'use') {
-        onUse({ key: item.key, title: item.title, angle: item.angle });
-        setUsedMessage('Tittel og vinkling er fylt inn i skjemaet under.');
-      }
     } catch {
       setError('Kunne ikke lagre valget.');
     } finally {
@@ -168,6 +213,12 @@ export function AboutBlogSuggestionsPanel({
   };
 
   const busy = refreshing || pendingKey !== null;
+  const showEmpty = shouldShowAboutSuggestionsEmptyState({
+    loading,
+    hasError: Boolean(error),
+    tableMessage: Boolean(tableMessage),
+    suggestionCount: suggestions.length,
+  });
 
   return (
     <section className="space-y-4" aria-labelledby="about-blog-suggestions-heading">
@@ -210,9 +261,23 @@ export function AboutBlogSuggestionsPanel({
       ) : null}
 
       {error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
-        </p>
+        <div
+          className="flex flex-wrap items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          role="alert"
+        >
+          <p className="min-w-0 flex-1">{error}</p>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => void load()}
+            className={cn(
+              buttonVariants({ variant: 'outline' }),
+              'min-h-11 shrink-0 border-destructive/30 bg-background px-3 text-destructive',
+            )}
+          >
+            Prøv igjen
+          </button>
+        </div>
       ) : null}
       {usedMessage ? (
         <p className="text-sm text-foreground" role="status">
@@ -221,13 +286,13 @@ export function AboutBlogSuggestionsPanel({
       ) : null}
 
       {loading ? (
-        <div className="space-y-2" aria-busy="true" aria-label="Laster forslag">
+        <div className="space-y-2" role="status" aria-busy="true" aria-label="Laster forslag">
           <div className="h-24 animate-pulse rounded-xl bg-muted" />
           <div className="h-24 animate-pulse rounded-xl bg-muted" />
         </div>
       ) : null}
 
-      {!loading && !tableMessage && suggestions.length === 0 ? (
+      {showEmpty ? (
         <p className="text-sm text-muted-foreground">
           {hasHistory
             ? 'Ingen åpne forslag. Avviste blir liggende, og utsatte kommer ikke tilbake før fristen er ute og du oppdaterer.'
@@ -259,7 +324,7 @@ export function AboutBlogSuggestionsPanel({
                     href={item.mentionUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:underline"
+                    className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
                     {item.interestOnly ? 'Åpne diskusjonen' : 'Åpne omtalen'}
                   </a>
@@ -268,7 +333,7 @@ export function AboutBlogSuggestionsPanel({
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => void act('use', item)}
+                    onClick={() => pick(item)}
                     className={cn(buttonVariants({ variant: 'default' }), 'min-h-11 px-3')}
                   >
                     Bruk forslaget

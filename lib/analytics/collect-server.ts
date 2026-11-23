@@ -1,16 +1,26 @@
 import { createHash } from 'node:crypto';
 import { classifyReferrer, type ReferrerBucket } from '@/lib/analytics/referrer';
+import { normalizeAnalyticsPathTemplate } from '@/lib/analytics/path-template';
 
 const ALLOWED_EVENT_NAMES = new Set([
   'page_view',
   'share_link_click',
   'poll_share_landing',
-] as const);
+  'http_error',
+]);
 
 export type AnalyticsEventName =
   | 'page_view'
   | 'share_link_click'
-  | 'poll_share_landing';
+  | 'poll_share_landing'
+  | 'http_error';
+
+export type AnalyticsEventMetadata = {
+  bucket?: ReferrerBucket;
+  status?: number;
+  method?: string;
+  source?: 'app' | 'client';
+};
 
 export type ParsedCollectPayload = {
   eventName: AnalyticsEventName;
@@ -21,7 +31,7 @@ export type ParsedCollectPayload = {
   utmCampaign: string | null;
   refCode: string | null;
   shareCode: string | null;
-  metadata: { bucket: ReferrerBucket };
+  metadata: AnalyticsEventMetadata;
 };
 
 export type ParseCollectResult =
@@ -70,6 +80,33 @@ function firstTrimmedField(
   return null;
 }
 
+function parseHttpStatus(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isInteger(value)) {
+    return value >= 400 && value <= 599 ? value : null;
+  }
+  if (typeof value === 'string' && value.trim() !== '') {
+    const n = Number(value);
+    if (Number.isInteger(n) && n >= 400 && n <= 599) {
+      return n;
+    }
+  }
+  return null;
+}
+
+function parseHttpMethod(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const method = value.trim().toUpperCase();
+  if (!method || method.length > 16) {
+    return null;
+  }
+  if (!/^[A-Z]+$/.test(method)) {
+    return null;
+  }
+  return method;
+}
+
 export function extractReferrerHost(referrerUrl: string | null | undefined): string | null {
   const raw = referrerUrl?.trim();
   if (!raw) {
@@ -91,13 +128,40 @@ export function parseCollectPayload(body: unknown): ParseCollectResult {
 
   const record = body as Record<string, unknown>;
   const eventName = record.eventName;
-  if (typeof eventName !== 'string' || !ALLOWED_EVENT_NAMES.has(eventName as AnalyticsEventName)) {
+  if (typeof eventName !== 'string' || !ALLOWED_EVENT_NAMES.has(eventName)) {
     return { ok: false };
   }
 
-  const path = requiredTrimmedString(record.path, MAX_PATH_LEN);
-  if (!path || !path.startsWith('/')) {
+  const pathRaw = requiredTrimmedString(record.path, MAX_PATH_LEN);
+  if (!pathRaw || !pathRaw.startsWith('/')) {
     return { ok: false };
+  }
+
+  if (eventName === 'http_error') {
+    const status = parseHttpStatus(record.status ?? record.httpStatus);
+    if (status === null) {
+      return { ok: false };
+    }
+    const method = parseHttpMethod(record.method) ?? 'GET';
+    const path = normalizeAnalyticsPathTemplate(pathRaw);
+    return {
+      ok: true,
+      value: {
+        eventName: 'http_error',
+        path,
+        referrerHost: null,
+        utmSource: null,
+        utmMedium: null,
+        utmCampaign: null,
+        refCode: null,
+        shareCode: null,
+        metadata: {
+          status,
+          method,
+          source: 'client',
+        },
+      },
+    };
   }
 
   const referrerRaw = optionalTrimmedString(record.referrer, 2048);
@@ -119,8 +183,8 @@ export function parseCollectPayload(body: unknown): ParseCollectResult {
   return {
     ok: true,
     value: {
-      eventName: eventName as AnalyticsEventName,
-      path,
+      eventName: eventName as Exclude<AnalyticsEventName, 'http_error'>,
+      path: pathRaw,
       referrerHost: extractReferrerHost(referrerRaw),
       utmSource,
       utmMedium,
@@ -161,7 +225,7 @@ export type AnalyticsInsertRow = {
   ref_code: string | null;
   share_link_id: string | null;
   session_hash: string | null;
-  metadata: { bucket: ReferrerBucket };
+  metadata: AnalyticsEventMetadata;
 };
 
 export function buildAnalyticsInsertRow(params: {

@@ -1,7 +1,7 @@
 import { MIN_ACCOUNT_AGE_YEARS } from '@/lib/legal/account-age';
 import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
 
-export const PRIVACY_NOTICE_UPDATED = '16. november 2026';
+export const PRIVACY_NOTICE_UPDATED = '22. november 2026';
 
 export const PRIVACY_PROCESSING_TABLE = [
   {
@@ -9,6 +9,12 @@ export const PRIVACY_PROCESSING_TABLE = [
     data: 'Navn, e-post, passord (kryptert), eventuell Google-ID, eventuelt telefonnummer',
     legalBasis: 'Avtale (GDPR art. 6(1)(b))',
     retention: 'Til du sletter kontoen',
+  },
+  {
+    purpose: 'Anonym besøksstatistikk (drift og forbedring)',
+    data: 'Sidevisning (sti), henvisning/kanal, delingskode, aggregerte HTTP-feilkoder — uten lagret IP eller navn',
+    legalBasis: 'Berettiget interesse (art. 6(1)(f))',
+    retention: 'Inntil 365 dager, deretter slettes råhendelser',
   },
   {
     purpose: 'Lagre holdninger, stemmer og valgomat',
@@ -53,7 +59,7 @@ export const PRIVACY_PROCESSING_TABLE = [
     retention: 'Kortvarig i driftslogger (konfigureres på server)',
   },
   {
-    purpose: 'Anonym statistikk',
+    purpose: 'Offentlige aggregerte menings-/avstemningstall',
     data: `Aggregater (minst ${MIN_PUBLIC_AGGREGATE_N} svar der det gjelder)`,
     legalBasis: 'Ikke personopplysninger etter aggregering',
     retention: 'Løpende aggregater',

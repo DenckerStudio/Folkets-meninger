@@ -3,9 +3,9 @@
 import { useCallback, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Columns3, ExternalLink } from 'lucide-react';
+import { CheckCircle2, Columns3, ExternalLink, TriangleAlert } from 'lucide-react';
 import { AdminBackLink } from '@/components/admin/admin-shell';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import {
   approveLocalAiSuggestionAction,
@@ -13,7 +13,14 @@ import {
   rejectFailedLocalAiTaskAction,
   rejectLocalAiSuggestionAction,
   requeueFailedLocalAiTaskAction,
+  retryMarkLocalAiDraftPrReadyAction,
 } from '@/lib/admin/local-ai-hub/actions';
+import {
+  type LocalAiApproveHubNotice,
+  LOCAL_AI_HUB_NOTICE_STORAGE_KEY,
+  parseStoredHubNotice,
+  serializeHubNotice,
+} from '@/lib/admin/local-ai-hub/approve-hub-notice';
 import type { LocalAiFinishedRow, LocalAiOverviewResult } from '@/lib/admin/local-ai-hub/overview';
 import { routes } from '@/lib/routes';
 import { verdictLabel, type ReviewVerdictOutcome } from '@/lib/admin/local-ai-hub/verdict-parser';
@@ -80,7 +87,42 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
   const [failedRejectConfirmId, setFailedRejectConfirmId] = useState<number | null>(null);
   const [showInactivePrs, setShowInactivePrs] = useState(false);
   const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
+  const [hubNotice, setHubNotice] = useState<LocalAiApproveHubNotice | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return parseStoredHubNotice(sessionStorage.getItem(LOCAL_AI_HUB_NOTICE_STORAGE_KEY));
+    } catch {
+      return null;
+    }
+  });
+  const [retryReadyTaskId, setRetryReadyTaskId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const persistHubNotice = useCallback((notice: LocalAiApproveHubNotice | null) => {
+    try {
+      if (!notice) {
+        sessionStorage.removeItem(LOCAL_AI_HUB_NOTICE_STORAGE_KEY);
+      } else {
+        sessionStorage.setItem(LOCAL_AI_HUB_NOTICE_STORAGE_KEY, serializeHubNotice(notice));
+      }
+    } catch {
+      // sessionStorage utilgjengelig
+    }
+  }, []);
+
+  const applyHubNotice = useCallback(
+    (notice: LocalAiApproveHubNotice | undefined) => {
+      if (!notice) return;
+      setHubNotice(notice);
+      persistHubNotice(notice);
+    },
+    [persistHubNotice],
+  );
+
+  const dismissHubNotice = useCallback(() => {
+    setHubNotice(null);
+    persistHubNotice(null);
+  }, [persistHubNotice]);
 
   const forgetCardError = (key: string) => {
     setCardErrors((prev) => {
@@ -151,7 +193,35 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
         return;
       }
       forgetCardError(`f-${taskId}`);
+      applyHubNotice(res.hubNotice);
       setRejectConfirmId(null);
+      await refresh();
+    });
+  };
+
+  const runRetryReady = (taskId: number) => {
+    setRetryReadyTaskId(taskId);
+    startTransition(async () => {
+      const res = await retryMarkLocalAiDraftPrReadyAction(taskId);
+      setRetryReadyTaskId(null);
+      if (!res.ok) {
+        setHubNotice({
+          variant: 'warning',
+          title: 'Advarsel',
+          body: res.error,
+          taskId,
+          canRetryReady: true,
+        });
+        persistHubNotice({
+          variant: 'warning',
+          title: 'Advarsel',
+          body: res.error,
+          taskId,
+          canRetryReady: true,
+        });
+        return;
+      }
+      applyHubNotice(res.hubNotice);
       await refresh();
     });
   };
@@ -543,6 +613,81 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
           </div>
         ) : null}
       </section>
+
+      {hubNotice ? (
+        <div
+          className={cn(
+            'flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:items-start sm:justify-between',
+            hubNotice.variant === 'success'
+              ? 'border-emerald-500/30 bg-emerald-500/10'
+              : 'border-amber-500/30 bg-amber-500/10',
+          )}
+          role="status"
+          aria-live="polite"
+          aria-labelledby="lokal-ai-hub-notice-text"
+        >
+          <div className="flex gap-2">
+            {hubNotice.variant === 'warning' ? (
+              <TriangleAlert
+                className="mt-0.5 h-5 w-5 shrink-0 text-amber-800 dark:text-amber-200"
+                aria-hidden
+              />
+            ) : (
+              <CheckCircle2
+                className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-300"
+                aria-hidden
+              />
+            )}
+            <p id="lokal-ai-hub-notice-text" className="text-sm text-foreground">
+              {hubNotice.variant === 'warning' ? (
+                <>
+                  <span className="font-semibold">Advarsel:</span> {hubNotice.body}
+                </>
+              ) : (
+                hubNotice.body
+              )}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 sm:shrink-0">
+            {hubNotice.pullUrl && hubNotice.pullNumber ? (
+              <Link
+                href={hubNotice.pullUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  buttonVariants({ variant: 'outline' }),
+                  'min-h-11 gap-1.5',
+                  VURDER_FOCUS_RING,
+                )}
+              >
+                Åpne PR #{hubNotice.pullNumber} på GitHub
+                <ExternalLink className="h-4 w-4" aria-hidden />
+              </Link>
+            ) : null}
+            {hubNotice.canRetryReady ? (
+              <Button
+                type="button"
+                variant="secondary"
+                className={cn('min-h-11', VURDER_FOCUS_RING)}
+                disabled={retryReadyTaskId === hubNotice.taskId || isPending}
+                onClick={() => runRetryReady(hubNotice.taskId)}
+              >
+                {retryReadyTaskId === hubNotice.taskId
+                  ? 'Prøver …'
+                  : 'Prøv igjen å sette ready'}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              className={cn('min-h-11', VURDER_FOCUS_RING)}
+              onClick={dismissHubNotice}
+            >
+              Lukk
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <section aria-labelledby="lokal-ai-forslag-heading" className="space-y-4">
         <h2 id="lokal-ai-forslag-heading" className="text-lg font-semibold text-foreground">

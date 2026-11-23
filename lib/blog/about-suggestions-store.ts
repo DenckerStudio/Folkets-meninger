@@ -22,6 +22,8 @@ const SELECT_COLUMNS =
 export type AboutSuggestionStored = AboutSuggestion & {
   status: AboutSuggestionStatus;
   snoozeUntil: string | null;
+  draftRequestId: string | null;
+  sourceEvent: string | null;
 };
 
 type StoreFailure = { ok: false; missing: boolean; status: number; message: string };
@@ -88,6 +90,12 @@ function mapRow(raw: Record<string, unknown>): AboutSuggestionStored | null {
     evergreen: source === 'staende',
     status,
     snoozeUntil: typeof raw.snooze_until === 'string' ? raw.snooze_until : null,
+    draftRequestId:
+      typeof raw.draft_request_id === 'string' && raw.draft_request_id.trim()
+        ? raw.draft_request_id.trim()
+        : null,
+    sourceEvent:
+      typeof raw.source_event === 'string' && raw.source_event.trim() ? raw.source_event.trim() : null,
   };
 }
 
@@ -135,7 +143,31 @@ export function feedbackFromStored(rows: AboutSuggestionStored[]): AboutSuggesti
     title: row.title,
     status: row.status,
     snoozeUntil: row.snoozeUntil,
+    usedHasDraft:
+      row.status === 'used' && !row.sourceEvent && !row.draftRequestId ? false : undefined,
   }));
+}
+
+export async function reopenAboutSuggestion(key: string): Promise<{ ok: true } | StoreFailure> {
+  const supabase = getServiceSupabase();
+  const { data, error } = await supabase
+    .from(TABLE)
+    .update({
+      status: 'open',
+      draft_request_id: null,
+      source_event: null,
+      acted_by: null,
+      snooze_until: null,
+    })
+    .eq('suggestion_key', key)
+    .eq('status', 'used')
+    .select('suggestion_key')
+    .maybeSingle();
+  if (error) return failure(error, 'Kunne ikke åpne forslaget på nytt.');
+  if (!data) {
+    return { ok: false, missing: false, status: 404, message: 'Forslaget finnes ikke lenger.' };
+  }
+  return { ok: true };
 }
 
 export async function applyAboutSuggestionPlan(plan: AboutSuggestionWritePlan): Promise<

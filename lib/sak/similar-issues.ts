@@ -3,6 +3,7 @@ import { getChatRagRpcClient } from '@/lib/chat/rag-rpc-client';
 import { resolveSakStatusFromSources, type SakTreatmentStatus } from '@/lib/sak-status';
 import { sakStatusOrOutcomeLabel } from '@/lib/sak/sak-outcome';
 import { parseSimilarSakFacets, type SimilarSakFacets } from '@/lib/sak/similar-issues-labels';
+import { loadSimilarSakerWithStatus, type SimilarSakerLoadResult } from '@/lib/sak/similar-issues-load';
 
 export type SimilarSakListItem = {
   id: string;
@@ -131,6 +132,17 @@ export function fetchSimilarSaker(issueId: string): Promise<SimilarSakListItem[]
   return unstable_cache(
     () => fetchSimilarSakerUncached(id),
     ['similar-stortinget-issues', id],
+    { revalidate: 3600 },
+  )();
+}
+
+export function fetchSimilarSakerWithStatus(issueId: string): Promise<SimilarSakerLoadResult> {
+  const id = issueId.trim();
+  if (!id) return Promise.resolve({ status: 'ok', items: [] });
+
+  return unstable_cache(
+    () => loadSimilarSakerWithStatus(id),
+    ['similar-stortinget-issues-status', id],
     { revalidate: 3600 },
   )();
 }

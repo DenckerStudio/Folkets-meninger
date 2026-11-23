@@ -32,11 +32,15 @@ export function OverviewCards({ user, traffic, trafficCollectionEnabled }: Overv
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {trafficCollectionEnabled ? (
           <>
-            <StatCard label="Sidevisninger (30 dager)" value={traffic.pageViews} />
+            <StatCard
+              label="Sidevisninger (30 dager)"
+              value={traffic.pageViews}
+              caption="Crawlere filtreres bort."
+            />
             <StatCard
               label="Unike besøkende"
               value={traffic.uniqueVisitors}
-              caption="Telles når besøksanalyse er slått på."
+              caption="Telles når besøksanalyse er slått på. Crawlere filtreres bort."
             />
           </>
         ) : null}

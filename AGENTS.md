@@ -27,7 +27,7 @@ Supabase Auth (email/password + Google).
 | `evals/` | RAG eval harness (`npm run eval:rag*`) |
 | `e2e/` | Playwright specs (`npm run test:e2e`) |
 | `cms/` | Payload CMS 3 app deployed as `fm-cms` |
-| `infra/` | Coolify runbooks (`coolify/`), SearXNG (`searxng/`) |
+| `infra/` | Coolify runbooks (`coolify/` inkl. Umami + Traefik access-log metrics), SearXNG (`searxng/`) |
 | `docs/` | Security audits, n8n contracts, [`docs/agents/reference.md`](docs/agents/reference.md) |
 
 ## Style
@@ -69,6 +69,9 @@ copy `.env.example`; DB: `npm run supabase:start`. Optional: `npm run test:e2e`.
 
 ## Never do this
 
+- Merge a pull request, enable auto-merge, or push to `main` — **cloud agents and other coding
+  agents only open and update PRs**. Merge happens only via **Chief of Staff** or the admin hub,
+  after green CI and Friction + Pixel PASS on the same head SHA, even if someone asks you to merge.
 - Run `supabase db push` or apply migrations yourself — **Coolify Expert** does backup, dry-run,
   then apply; never edit an applied migration (add a new file).
 - New migrations: explicit `REVOKE`/`GRANT`, RLS on new tables, table DDL as `postgres`;

@@ -13,6 +13,7 @@ import {
   resolveSakLastUpdatedDate,
 } from '@/lib/sak/saksgang-steps';
 import { formatSakDate, formatSakDateFromRaw } from '@/lib/sak/date-format';
+import { sakNummerMetaSessionPart } from '@/lib/sak/sak-meta-display';
 import { sakDocumentDisplayTitle } from '@/lib/sak/documents-filter';
 import { komiteNameFromDetail } from '@/lib/sak/similar-issues-labels';
 import { notFound } from 'next/navigation';
@@ -44,6 +45,15 @@ import { ImpactCalculator } from '@/components/sak/impact-calculator';
 import { KnowledgeQuiz } from '@/components/sak/knowledge-quiz';
 import { SimilarIssuesSection } from '@/components/sak/similar-issues-section';
 import { TopicAroundSakSection } from '@/components/search/topic-around-sak-section';
+import { fetchSimilarSakerWithStatus } from '@/lib/sak/similar-issues';
+import { dedupeSimilarSaker } from '@/lib/sak/similar-issues-dedupe';
+import {
+  SAK_OVERSIKT_RELATERT_ANCHOR_ID,
+  similarIssuesShowsInToc,
+  shouldShowSakOversiktRelatertAnchor,
+  type SakOversiktRelatertTocInput,
+} from '@/lib/sak/sak-oversikt-related-toc';
+import { sakPageTopicAroundWillRender } from '@/lib/search/topic-around-sak-visibility';
 import { SakMeningerSection } from '@/components/sak/sak-meninger-section';
 import { SakStortingetPollAggregateSection } from '@/components/sak/sak-stortinget-poll-aggregate-section';
 import { parseSakPageTabParam } from '@/lib/sak/sak-page-tabs';
@@ -255,6 +265,39 @@ export default async function SakPage({
     sakKind: displaySakKind,
   };
 
+  const relaterteSakIds = relaterteSaker.flatMap((rel: { relatert_sak?: { id?: unknown } }) => {
+    const id = rel.relatert_sak?.id;
+    return id != null ? [String(id)] : [];
+  });
+
+  const [similarLoad, hasTopicAround] = !isDedicatedResearchSak
+    ? await Promise.all([
+        fetchSimilarSakerWithStatus(sak.id),
+        sakPageTopicAroundWillRender({
+          issueId: sak.id,
+          title: officialTitle,
+          summary: descriptionToShow || null,
+          relatedIssueIds: relaterteSakIds,
+        }),
+      ])
+    : [{ status: 'ok' as const, items: [] }, false];
+
+  const similarItemsForSection =
+    similarLoad.status === 'ok'
+      ? dedupeSimilarSaker(similarLoad.items, sak.id, relaterteSakIds)
+      : [];
+
+  const relatedTocInput: SakOversiktRelatertTocInput = {
+    hasRelaterteSaker: relaterteSaker.length > 0,
+    similarShowsSection: similarIssuesShowsInToc({
+      loadStatus: similarLoad.status,
+      itemCount: similarItemsForSection.length,
+    }),
+    hasTopicAround,
+  };
+
+  const showRelatertAnchor = shouldShowSakOversiktRelatertAnchor(relatedTocInput);
+
   const oversiktToc: SakOversiktTocEntry[] = [
     { id: 'sak-oversikt-metadata', label: 'Nøkkelinfo' },
     ...(showSaksgangInOverview ? [{ id: SAK_OVERSIKT_SAKSGANG_ANCHOR_ID, label: 'Saksgang' }] : []),
@@ -262,9 +305,6 @@ export default async function SakPage({
     ...(forslagstillere.length > 0 ? [{ id: 'sak-oversikt-forslagstillere', label: 'Forslagstillere' }] : []),
     ...(saksordfoerere.length > 0 ? [{ id: 'sak-oversikt-ordforer', label: 'Saksordførere' }] : []),
     { id: 'sak-oversikt-konsekvens', label: 'Konsekvenser' },
-    ...(relaterteSaker.length > 0 || !isDedicatedResearchSak
-      ? [{ id: 'sak-oversikt-relatert', label: 'Relaterte saker' }]
-      : []),
   ];
 
   return (
@@ -376,7 +416,7 @@ export default async function SakPage({
         initialTab={initialTab}
         documentCount={documents.length}
         oversikt={
-          <SakOversiktShell toc={oversiktToc}>
+          <SakOversiktShell toc={oversiktToc} relatedToc={relatedTocInput}>
             {detailedContent ? (
               <div
                 id="sak-oversikt-metadata"
@@ -384,7 +424,8 @@ export default async function SakPage({
               >
                 {sakNummer && sakSesjon ? (
                   <SakMetaCard icon="file-text" label="Saksnummer" tooltipKey="saksnummer">
-                    Sak nr. {sakNummer} ({sakSesjon})
+                    Sak nr. {sakNummer}{' '}
+                    <span className="whitespace-nowrap">{sakNummerMetaSessionPart(String(sakSesjon))}</span>
                   </SakMetaCard>
                 ) : null}
                 {henvisning ? (
@@ -560,56 +601,53 @@ export default async function SakPage({
               sakSummary={descriptionToShow || officialTitle}
             />
 
-            <div id="sak-oversikt-relatert" className="scroll-mt-below-sak-tabs space-y-6">
-              {relaterteSaker.length > 0 ? (
-                <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
-                  <h2 className="mb-4 text-lg font-bold text-foreground">Relaterte saker</h2>
-                  <div className="space-y-2">
-                    {relaterteSaker.map((rel: any, i: number) => {
-                      const relSak = rel.relatert_sak;
-                      if (!relSak) return null;
-                      return (
-                        <Link
-                          key={i}
-                          href={`/dashboard/sak/${relSak.id}`}
-                          className="group block rounded-lg border border-border bg-muted/50 p-3 transition-colors hover:bg-muted"
-                        >
-                          <div className="text-sm font-medium text-foreground group-hover:text-brand">
-                            {relSak.korttittel || relSak.tittel}
-                          </div>
-                          {rel.relasjonstype ? (
-                            <div className="mt-1 text-xs text-muted-foreground">{rel.relasjonstype}</div>
-                          ) : null}
-                        </Link>
-                      );
-                    })}
+            {showRelatertAnchor ? (
+              <div id={SAK_OVERSIKT_RELATERT_ANCHOR_ID} className="scroll-mt-below-sak-tabs space-y-6">
+                {relaterteSaker.length > 0 ? (
+                  <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
+                    <h2 className="mb-4 text-lg font-bold text-foreground">Relaterte saker</h2>
+                    <div className="space-y-2">
+                      {relaterteSaker.map((rel: any, i: number) => {
+                        const relSak = rel.relatert_sak;
+                        if (!relSak) return null;
+                        return (
+                          <Link
+                            key={i}
+                            href={`/dashboard/sak/${relSak.id}`}
+                            className="group block rounded-lg border border-border bg-muted/50 p-3 transition-colors hover:bg-muted"
+                          >
+                            <div className="text-sm font-medium text-foreground group-hover:text-brand">
+                              {relSak.korttittel || relSak.tittel}
+                            </div>
+                            {rel.relasjonstype ? (
+                              <div className="mt-1 text-xs text-muted-foreground">{rel.relasjonstype}</div>
+                            ) : null}
+                          </Link>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ) : null}
+                ) : null}
 
-              {!isDedicatedResearchSak ? (
-                <SimilarIssuesSection
-                  sakId={sak.id}
-                  current={similarCurrent}
-                  excludeIssueIds={relaterteSaker.flatMap((rel: { relatert_sak?: { id?: unknown } }) => {
-                    const id = rel.relatert_sak?.id;
-                    return id != null ? [String(id)] : [];
-                  })}
-                />
-              ) : null}
+                {!isDedicatedResearchSak ? (
+                  <SimilarIssuesSection
+                    sakId={sak.id}
+                    current={similarCurrent}
+                    excludeIssueIds={relaterteSakIds}
+                    initialLoad={similarLoad}
+                  />
+                ) : null}
 
-              {!isDedicatedResearchSak ? (
-                <TopicAroundSakSection
-                  issueId={sak.id}
-                  title={officialTitle}
-                  summary={descriptionToShow || null}
-                  relatedIssueIds={relaterteSaker.flatMap((rel: { relatert_sak?: { id?: unknown } }) => {
-                    const id = rel.relatert_sak?.id;
-                    return id != null ? [String(id)] : [];
-                  })}
-                />
-              ) : null}
-            </div>
+                {!isDedicatedResearchSak ? (
+                  <TopicAroundSakSection
+                    issueId={sak.id}
+                    title={officialTitle}
+                    summary={descriptionToShow || null}
+                    relatedIssueIds={relaterteSakIds}
+                  />
+                ) : null}
+              </div>
+            ) : null}
           </SakOversiktShell>
         }
         argumenter={

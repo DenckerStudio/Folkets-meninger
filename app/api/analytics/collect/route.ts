@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isLikelyBot } from '@/lib/analytics/bot';
 import { trustedClientIp } from '@/lib/analytics/client-ip';
 import {
   buildAnalyticsInsertRow,
@@ -42,6 +43,11 @@ export async function POST(request: Request) {
     return new NextResponse(null, { status: 204 });
   }
 
+  const userAgent = request.headers.get('user-agent') ?? '';
+  if (isLikelyBot(userAgent)) {
+    return new NextResponse(null, { status: 204 });
+  }
+
   const ip = trustedClientIp(request);
   const ipRate = await checkRateLimit(`analytics-collect:ip:${ip}`, 60, 60_000);
   if (!ipRate.ok) {
@@ -66,7 +72,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Ugyldig forespørsel' }, { status: 400 });
   }
 
-  const userAgent = request.headers.get('user-agent') ?? '';
+  // Stricter cap for error beacons (noisy scrapers / retries).
+  if (parsed.value.eventName === 'http_error') {
+    const errorRate = await checkRateLimit(`analytics-http-error:ip:${ip}`, 20, 60_000);
+    if (!errorRate.ok) {
+      return new NextResponse(null, { status: 204 });
+    }
+  }
+
   const sessionHash = computeSessionHash({
     secret: process.env.ANALYTICS_COLLECT_SECRET,
     ip,
