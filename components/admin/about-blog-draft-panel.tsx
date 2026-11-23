@@ -279,7 +279,7 @@ export function AboutBlogDraftPanel({
                 href={created.adminUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={cn(buttonVariants({ variant: 'outline' }), 'min-h-11 gap-1.5 px-3')}
+                className={cn(buttonVariants({ variant: 'outline' }), 'min-h-11 gap-1.5 px-3 w-full sm:w-auto')}
               >
                 Åpne utkast
                 <ExternalLink className="size-4 shrink-0" aria-hidden />
@@ -287,7 +287,7 @@ export function AboutBlogDraftPanel({
             ) : null}
             <Link
               href={adminVurderHref('blogg')}
-              className={cn(buttonVariants({ variant: 'outline' }), 'min-h-11 px-3')}
+              className={cn(buttonVariants({ variant: 'outline' }), 'min-h-11 px-3 w-full sm:w-auto')}
             >
               Gå til vurdering
             </Link>
@@ -310,7 +310,7 @@ export function AboutBlogDraftPanel({
           </div>
           <Link
             href={publicCategoryHref}
-            className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:underline"
+            className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             Se temaet på bloggen
           </Link>
@@ -337,7 +337,7 @@ export function AboutBlogDraftPanel({
         ) : null}
 
         {listLoading ? (
-          <div className="space-y-2" aria-busy="true" aria-label="Laster utkast">
+          <div className="space-y-2" aria-busy="true" aria-label="Laster utkast" role="status">
             <div className="h-11 animate-pulse rounded-lg bg-muted" />
             <div className="h-11 animate-pulse rounded-lg bg-muted" />
           </div>
