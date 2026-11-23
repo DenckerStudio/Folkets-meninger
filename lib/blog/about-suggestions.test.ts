@@ -149,11 +149,31 @@ function testDismissedKeysStayHidden() {
         title: 'Tydeligere høringstekst',
         status: 'used',
         snoozeUntil: null,
+        usedHasDraft: true,
       },
     ],
     now,
   });
   assert.ok(!renamed.some((item) => item.title === 'Tydeligere høringstekst'));
+
+  const reused = visibleAboutSuggestions({
+    live: buildChangelogSuggestions(
+      [{ id: '9', title: 'Tydeligere høringstekst', published: true }],
+      [],
+    ),
+    written: [],
+    feedback: [
+      {
+        key: 'endringslogg:1',
+        title: 'Tydeligere høringstekst',
+        status: 'used',
+        snoozeUntil: null,
+        usedHasDraft: false,
+      },
+    ],
+    now,
+  });
+  assert.ok(reused.some((item) => item.title === 'Tydeligere høringstekst'));
 
   const snoozed = visibleAboutSuggestions({
     live,
