@@ -25,6 +25,7 @@ import type { LocalAiFinishedRow, LocalAiOverviewResult } from '@/lib/admin/loca
 import { routes } from '@/lib/routes';
 import { verdictLabel, type ReviewVerdictOutcome } from '@/lib/admin/local-ai-hub/verdict-parser';
 import { cn } from '@/lib/utils';
+import { LocalAiRunnerStatusBanner } from './local-ai-runner-status-banner';
 
 function verdictClass(outcome: ReviewVerdictOutcome): string {
   switch (outcome) {
@@ -68,6 +69,7 @@ export function LocalAiHubPageSkeleton() {
   return (
     <div className="space-y-6" role="status" aria-busy="true" aria-label="Laster lokal-AI-oversikt">
       <div className="h-11 w-44 animate-pulse rounded bg-muted/60" />
+      <div className="h-24 w-full animate-pulse rounded-xl border border-border bg-muted/40" />
       <div className="h-20 w-full max-w-2xl animate-pulse rounded bg-muted/60" />
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="min-h-48 animate-pulse rounded-xl border border-border bg-card" />
@@ -309,6 +311,8 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
           </Link>
         </p>
       </header>
+
+      <LocalAiRunnerStatusBanner />
 
       {overview.partialErrors.length > 0 ? (
         <div
