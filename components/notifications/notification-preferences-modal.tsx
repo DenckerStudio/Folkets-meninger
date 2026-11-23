@@ -250,15 +250,27 @@ export function NotificationPreferencesModal({ open, onClose }: Props) {
           />
           <label className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-3 py-3">
             <span className="text-sm font-medium text-foreground">Ikke varsle om saker eldre enn (dager)</span>
-            <input
-              type="number"
-              min={MIN_MAX_CASE_AGE_DAYS}
-              max={MAX_MAX_CASE_AGE_DAYS}
-              disabled={locked || !v2Available}
-              value={locked ? 30 : prefs.max_case_age_days}
-              onChange={(e) => update('max_case_age_days', Number(e.target.value) || 30)}
+            <div 
+              role="button" 
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  // Handle the input change here if needed
+                }
+              }}
               className="h-11 w-20 rounded-lg border border-border bg-background px-2 text-right text-sm"
-            />
+            >
+              <input
+                type="number"
+                min={MIN_MAX_CASE_AGE_DAYS}
+                max={MAX_MAX_CASE_AGE_DAYS}
+                disabled={locked || !v2Available}
+                value={locked ? 30 : prefs.max_case_age_days}
+                onChange={(e) => update('max_case_age_days', Number(e.target.value) || 30)}
+                className="h-full w-full bg-transparent text-right text-sm"
+              />
+            </div>
           </label>
           {locked ? (
             <p className="text-xs text-muted-foreground">
