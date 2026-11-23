@@ -1,5 +1,12 @@
+import { LOCAL_AI_GITHUB_REPO } from '@/lib/admin/local-ai-hub/labels';
+
 /** Tidsgrense: «running» med for gammel updated_at behandles som utilgjengelig. */
 export const RUNNER_STATUS_STALE_RUNNING_MS = 15 * 60 * 1000;
+
+export const RUNNER_TASK_TITLE_MAX_LENGTH = 200;
+
+/** Må matche lokal-ai-runner-grener (samme prefiks som overview). */
+export const LOCAL_AI_RUNNER_BRANCH_RE = /^lokal-ai\/vikunja-\d+-[a-z0-9-]+$/;
 
 export const LOCAL_AI_RUNNER_STATUS_FETCH_TIMEOUT_MS = 2_000;
 
@@ -19,7 +26,8 @@ export type RunnerStatusPayload = {
   step: RunnerStep | null;
   task: RunnerStatusTask | null;
   branch: string | null;
-  pr: RunnerStatusPr | null;
+  /** Kun tall fra payload; URL bygges ved mapping. */
+  prNumber: number | null;
   model: string | null;
   tok_s: number | null;
   last_run_at: string | null;
@@ -55,23 +63,40 @@ function readOptionalString(value: unknown): string | null {
   return trimmed ? trimmed : null;
 }
 
+export function truncateRunnerTaskTitle(title: string): string {
+  if (title.length <= RUNNER_TASK_TITLE_MAX_LENGTH) return title;
+  return `${title.slice(0, RUNNER_TASK_TITLE_MAX_LENGTH - 1)}…`;
+}
+
+export function buildLocalAiRunnerPrUrl(number: number): string {
+  const { owner, repo } = LOCAL_AI_GITHUB_REPO;
+  return `https://github.com/${owner}/${repo}/pull/${number}`;
+}
+
 function readTask(value: unknown): RunnerStatusTask | null {
   if (!value || typeof value !== 'object') return null;
   const rec = value as Record<string, unknown>;
-  const id = typeof rec.id === 'number' && Number.isFinite(rec.id) ? rec.id : null;
+  const id =
+    typeof rec.id === 'number' && Number.isInteger(rec.id) && rec.id > 0 ? rec.id : null;
   const title = readOptionalString(rec.title);
   if (id === null || !title) return null;
-  return { id, title };
+  return { id, title: truncateRunnerTaskTitle(title) };
 }
 
-function readPr(value: unknown): RunnerStatusPr | null {
+function readPrNumber(value: unknown): number | null {
   if (!value || typeof value !== 'object') return null;
   const rec = value as Record<string, unknown>;
   const number =
-    typeof rec.number === 'number' && Number.isFinite(rec.number) ? rec.number : null;
-  const url = readOptionalString(rec.url);
-  if (number === null || !url) return null;
-  return { number, url };
+    typeof rec.number === 'number' && Number.isInteger(rec.number) && rec.number > 0
+      ? rec.number
+      : null;
+  return number;
+}
+
+function readRunnerBranch(value: unknown): string | null {
+  const branch = readOptionalString(value);
+  if (!branch || !LOCAL_AI_RUNNER_BRANCH_RE.test(branch)) return null;
+  return branch;
 }
 
 function readTokS(value: unknown): number | null {
@@ -138,8 +163,8 @@ export function parseRunnerStatusPayload(raw: unknown): RunnerStatusPayload | nu
     pause_until: pauseUntil,
     step,
     task: readTask(rec.task),
-    branch: readOptionalString(rec.branch),
-    pr: readPr(rec.pr),
+    branch: readRunnerBranch(rec.branch),
+    prNumber: readPrNumber(rec.pr),
     model: readOptionalString(rec.model),
     tok_s: readTokS(rec.tok_s),
     last_run_at: readOptionalString(rec.last_run_at),
@@ -183,7 +208,13 @@ export function mapRunnerStatusToView(
     step: payload.state === 'running' ? payload.step : null,
     task: payload.state === 'running' ? payload.task : null,
     branch: payload.state === 'running' ? payload.branch : null,
-    pr: payload.state === 'running' ? payload.pr : null,
+    pr:
+      payload.state === 'running' && payload.prNumber !== null
+        ? {
+            number: payload.prNumber,
+            url: buildLocalAiRunnerPrUrl(payload.prNumber),
+          }
+        : null,
     model: payload.model,
     tokSLabel: payload.tok_s !== null ? formatRunnerTokS(payload.tok_s) : null,
     lastRunAtLabel:
@@ -200,11 +231,26 @@ export function parseAndMapRunnerStatus(
   return mapRunnerStatusToView(payload, nowMs);
 }
 
-/** Sikrer at API-svaret ikke kan lekke intern runner-URL eller rå feilmeldinger. */
+/** Whitelist: kun view-model-felter til admin-API / klient — ingen rå upstream-data. */
 export function serializeRunnerStatusForClient(
   result: LocalAiRunnerStatusResult,
 ): LocalAiRunnerStatusResult {
-  return result;
+  if (!result.available) {
+    return { available: false };
+  }
+  return {
+    available: true,
+    statusLabel: result.statusLabel,
+    state: result.state,
+    pauseUntil: result.pauseUntil,
+    step: result.step,
+    task: result.task ? { id: result.task.id, title: result.task.title } : null,
+    branch: result.branch,
+    pr: result.pr ? { number: result.pr.number, url: result.pr.url } : null,
+    model: result.model,
+    tokSLabel: result.tokSLabel,
+    lastRunAtLabel: result.lastRunAtLabel,
+  };
 }
 
 export async function fetchRunnerStatusFromUrl(

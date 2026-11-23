@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Activity, CirclePause, CirclePlay } from 'lucide-react';
 import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
@@ -9,8 +9,13 @@ import { cn } from '@/lib/utils';
 
 const POLL_MS = 8_000;
 
+type BannerPhase = 'loading' | 'hidden' | 'ready';
+
 export function LocalAiRunnerStatusBanner() {
+  const [phase, setPhase] = useState<BannerPhase>('loading');
   const [status, setStatus] = useState<LocalAiRunnerStatusResult | null>(null);
+  const [liveAnnouncement, setLiveAnnouncement] = useState<string | null>(null);
+  const prevStatusLabelRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -18,11 +23,27 @@ export function LocalAiRunnerStatusBanner() {
     const load = async () => {
       try {
         const res = await fetch('/api/admin/local-ai-hub/status', { cache: 'no-store' });
-        if (res.status === 404) return;
+        if (res.status === 404) {
+          if (!cancelled) setPhase('hidden');
+          return;
+        }
         const data = (await res.json()) as LocalAiRunnerStatusResult;
-        if (!cancelled) setStatus(data);
+        if (cancelled) return;
+        setStatus(data);
+        setPhase('ready');
+        if (data.available && data.statusLabel !== prevStatusLabelRef.current) {
+          prevStatusLabelRef.current = data.statusLabel;
+          setLiveAnnouncement(data.statusLabel);
+        }
+        if (!data.available) {
+          prevStatusLabelRef.current = null;
+        }
       } catch {
-        if (!cancelled) setStatus({ available: false });
+        if (!cancelled) {
+          setStatus({ available: false });
+          setPhase('ready');
+          prevStatusLabelRef.current = null;
+        }
       }
     };
 
@@ -34,23 +55,46 @@ export function LocalAiRunnerStatusBanner() {
     };
   }, []);
 
-  const unavailable = status === null || !status.available;
+  if (phase === 'hidden') {
+    return null;
+  }
 
   const iconClass = 'mt-0.5 h-5 w-5 shrink-0 text-brand';
+
+  if (phase === 'loading') {
+    return (
+      <section
+        aria-labelledby="lokal-ai-runner-status-heading"
+        aria-busy="true"
+        className="rounded-xl border border-border bg-card p-4 shadow-sm"
+      >
+        <h2 id="lokal-ai-runner-status-heading" className="sr-only">
+          Runner-status
+        </h2>
+        <p className="sr-only">Laster status…</p>
+        <div className="h-12 animate-pulse rounded bg-muted/60" aria-hidden />
+      </section>
+    );
+  }
+
+  const unavailable = status !== null && !status.available;
 
   return (
     <section
       aria-labelledby="lokal-ai-runner-status-heading"
-      aria-live="polite"
-      role="status"
       className="rounded-xl border border-border bg-card p-4 shadow-sm"
     >
       <h2 id="lokal-ai-runner-status-heading" className="sr-only">
         Runner-status
       </h2>
+      {liveAnnouncement ? (
+        <p className="sr-only" aria-live="polite" role="status">
+          {liveAnnouncement}
+        </p>
+      ) : null}
       {unavailable ? (
         <p className="text-sm text-muted-foreground">Status utilgjengelig</p>
-      ) : (
+      ) : status?.available ? (
         <div className="space-y-3">
           <div className="flex flex-wrap items-start gap-3">
             {status.state === 'running' ? (
@@ -112,7 +156,7 @@ export function LocalAiRunnerStatusBanner() {
             </dl>
           )}
         </div>
-      )}
+      ) : null}
     </section>
   );
 }

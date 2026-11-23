@@ -10,6 +10,9 @@ import {
   parseRunnerStatusPayload,
   serializeRunnerStatusForClient,
   fetchRunnerStatusFromUrl,
+  buildLocalAiRunnerPrUrl,
+  truncateRunnerTaskTitle,
+  RUNNER_TASK_TITLE_MAX_LENGTH,
   type RunnerStatusPayload,
 } from '@/lib/admin/local-ai-hub/runner-status';
 
@@ -25,7 +28,7 @@ function basePayload(overrides: Partial<RunnerStatusPayload> = {}): RunnerStatus
     step: null,
     task: null,
     branch: null,
-    pr: null,
+    prNumber: null,
     model: null,
     tok_s: null,
     last_run_at: null,
@@ -74,7 +77,7 @@ describe('parseAndMapRunnerStatus', () => {
         step: 'koder',
         task: { id: 50, title: 'Fiks banner' },
         branch: 'lokal-ai/vikunja-50-fiks',
-        pr: { number: 330, url: 'https://github.com/DenckerStudio/Folkets-meninger/pull/330' },
+        prNumber: 330,
         model: 'qwen3-coder:30b',
         tok_s: 12,
         last_run_at: '2026-11-23T15:42:00+01:00',
@@ -88,7 +91,7 @@ describe('parseAndMapRunnerStatus', () => {
     assert.equal(view.branch, 'lokal-ai/vikunja-50-fiks');
     assert.deepEqual(view.pr, {
       number: 330,
-      url: 'https://github.com/DenckerStudio/Folkets-meninger/pull/330',
+      url: buildLocalAiRunnerPrUrl(330),
     });
     assert.equal(view.tokSLabel, '12 tok/s');
   });
@@ -117,7 +120,7 @@ describe('parseAndMapRunnerStatus', () => {
         mapRunnerStatusToView(
           basePayload({
             state: 'running',
-            branch: 'lokal-ai/vikunja-1',
+            branch: 'lokal-ai/vikunja-1-fix',
           }),
           NOW,
         ),
@@ -125,6 +128,94 @@ describe('parseAndMapRunnerStatus', () => {
     );
     assert.doesNotMatch(serialized, /runner-status\.test/i);
     assert.doesNotMatch(serialized, /LOCAL_AI_RUNNER/i);
+  });
+
+  it('ignorerer javascript: og fremmed host i pr.url', () => {
+    const view = parseAndMapRunnerStatus(
+      {
+        updated_at: '2026-11-23T16:09:00+01:00',
+        state: 'running',
+        step: 'koder',
+        task: { id: 50, title: 'Test' },
+        branch: 'lokal-ai/vikunja-50-test',
+        pr: { number: 330, url: 'javascript:alert(1)' },
+        pause_until: null,
+        model: null,
+        tok_s: null,
+        last_run_at: null,
+      },
+      NOW,
+    );
+    assert.equal(view.available, true);
+    if (!view.available) return;
+    assert.equal(view.pr?.url, buildLocalAiRunnerPrUrl(330));
+    const body = JSON.stringify(serializeRunnerStatusForClient(view));
+    assert.doesNotMatch(body, /javascript:/i);
+    assert.doesNotMatch(body, /evil\.com/i);
+
+    const foreign = parseAndMapRunnerStatus(
+      {
+        updated_at: '2026-11-23T16:09:00+01:00',
+        state: 'running',
+        step: 'plukker',
+        pr: { number: 5, url: 'https://evil.com/repo/pull/5' },
+        pause_until: null,
+        task: null,
+        branch: null,
+        model: null,
+        tok_s: null,
+        last_run_at: null,
+      },
+      NOW,
+    );
+    assert.equal(foreign.available, true);
+    if (!foreign.available) return;
+    assert.equal(foreign.pr?.url, buildLocalAiRunnerPrUrl(5));
+    assert.doesNotMatch(JSON.stringify(foreign), /evil\.com/);
+  });
+
+  it('dropper ugyldig gren', () => {
+    const view = parseAndMapRunnerStatus(
+      {
+        updated_at: '2026-11-23T16:09:00+01:00',
+        state: 'running',
+        step: 'pusher',
+        branch: 'feature/wrong-branch',
+        pause_until: null,
+        task: null,
+        pr: null,
+        model: null,
+        tok_s: null,
+        last_run_at: null,
+      },
+      NOW,
+    );
+    assert.equal(view.available, true);
+    if (!view.available) return;
+    assert.equal(view.branch, null);
+  });
+
+  it('kapper lang oppgavetittel', () => {
+    const longTitle = 'a'.repeat(RUNNER_TASK_TITLE_MAX_LENGTH + 50);
+    const view = parseAndMapRunnerStatus(
+      {
+        updated_at: '2026-11-23T16:09:00+01:00',
+        state: 'running',
+        step: 'koder',
+        task: { id: 9, title: longTitle },
+        branch: 'lokal-ai/vikunja-9-lang',
+        pause_until: null,
+        pr: null,
+        model: null,
+        tok_s: null,
+        last_run_at: null,
+      },
+      NOW,
+    );
+    assert.equal(view.available, true);
+    if (!view.available) return;
+    assert.equal(view.task?.title.length, RUNNER_TASK_TITLE_MAX_LENGTH);
+    assert.equal(view.task?.title, truncateRunnerTaskTitle(longTitle));
   });
 });
 
