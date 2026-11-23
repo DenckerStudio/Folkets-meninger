@@ -64,7 +64,8 @@ function testProductFacts() {
   assert.ok(facts.length > 5);
   const joined = facts.join('\n');
   assert.deepEqual(findForbiddenAboutTerms(joined), []);
-  assert.match(joined, /Ja, Nei eller Blank/);
+  assert.match(joined, /nei, blank eller ja/);
+  assert.doesNotMatch(joined, /Ja, Nei eller Blank/);
   assert.match(joined, /Stemme\+/);
   assert.doesNotMatch(joined, /Vet ikke/i);
 }

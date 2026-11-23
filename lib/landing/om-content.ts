@@ -1,7 +1,7 @@
 import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
 import { DATA_CONTROLLER, formatDataControllerBlock } from '@/lib/legal/controller';
 import { STANCE_AGGREGATE_DISCLOSURE } from '@/lib/copy/stance-privacy';
-import { pollBallotAltTextPhrase } from '@/lib/polls/ballot-buttons';
+import { pollBallotAltTextPhrase, pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
 import {
   STEMME_PLUS_BENEFITS,
   STEMME_PLUS_MONTHLY_PRICE_NOK,
@@ -25,7 +25,7 @@ export const OM_WHY_POINTS = [
   {
     title: 'Si din mening',
     body:
-      `Innloggede brukere kan markere holdning på saker, stemme Ja, Nei eller Blank i avstemninger og skrive strukturerte meninger i Folkets meninger.`,
+      `Innloggede brukere kan markere holdning på saker, stemme ${pollBallotRunningTextPhrase()} i avstemninger og skrive strukturerte meninger i Folkets meninger.`,
   },
   {
     title: 'Sammenlign med vedtak',
