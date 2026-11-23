@@ -1,10 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  APPROVE_PR_READY_WARNING,
-  approveSuccessAfterPrReady,
-  markLinkedDraftPrReadyForReview,
-} from '@/lib/admin/local-ai-hub/approve-pr-ready';
+import { markLinkedDraftPrReadyForReview } from '@/lib/admin/local-ai-hub/approve-pr-ready';
 import { LOCAL_AI_BRANCH_PREFIX } from '@/lib/admin/local-ai-hub/labels';
 
 const GH = { token: 'test-token', owner: 'DenckerStudio', repo: 'Folkets-meninger' };
@@ -52,6 +48,9 @@ describe('markLinkedDraftPrReadyForReview', () => {
         description: `Branch: ${branch}`,
       });
       assert.equal(result.ok, true);
+      if (result.ok) {
+        assert.equal(result.pull.number, 333);
+      }
       assert.equal(graphqlBodies.length, 1);
       assert.ok(graphqlBodies[0]?.includes('markPullRequestReadyForReview'));
     } finally {
@@ -109,7 +108,7 @@ describe('markLinkedDraftPrReadyForReview', () => {
     }
   });
 
-  it('returnerer feil når GraphQL feiler', async () => {
+  it('returnerer readyFailed når GraphQL feiler', async () => {
     const branch = `${LOCAL_AI_BRANCH_PREFIX}46-fix-thing`;
     const originalFetch = globalThis.fetch;
 
@@ -126,22 +125,45 @@ describe('markLinkedDraftPrReadyForReview', () => {
 
     try {
       const result = await markLinkedDraftPrReadyForReview(GH, 46, { description: branch });
-      assert.equal(result.ok, false);
-      assert.equal('error' in result && result.error, 'boom');
+      assert.equal('readyFailed' in result && result.readyFailed, true);
+      if ('readyFailed' in result && result.readyFailed) {
+        assert.equal(result.error, 'boom');
+        assert.equal(result.pull.number, 333);
+      }
     } finally {
       globalThis.fetch = originalFetch;
     }
   });
-});
 
-describe('approveSuccessAfterPrReady', () => {
-  it('gir advarsel ved mark-feil uten å feile godkjenning', () => {
-    const res = approveSuccessAfterPrReady({ ok: false, error: 'nettverk' });
-    assert.deepEqual(res, { ok: true, warning: APPROVE_PR_READY_WARNING });
-  });
+  it('lykkes med commentFailed når kommentar feiler etter ready', async () => {
+    const branch = `${LOCAL_AI_BRANCH_PREFIX}46-fix-thing`;
+    const originalFetch = globalThis.fetch;
 
-  it('gir ingen advarsel ved skip eller suksess', () => {
-    assert.deepEqual(approveSuccessAfterPrReady({ ok: true }), { ok: true });
-    assert.deepEqual(approveSuccessAfterPrReady({ ok: false, skipped: true }), { ok: true });
+    globalThis.fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('/pulls?')) {
+        return new Response(JSON.stringify([draftPull(branch)]), { status: 200 });
+      }
+      if (url === 'https://api.github.com/graphql') {
+        return new Response(
+          JSON.stringify({ data: { markPullRequestReadyForReview: { pullRequest: { isDraft: false } } } }),
+          { status: 200 },
+        );
+      }
+      if (url.includes('/issues/333/comments')) {
+        return new Response('nope', { status: 500 });
+      }
+      return new Response('unexpected', { status: 500 });
+    };
+
+    try {
+      const result = await markLinkedDraftPrReadyForReview(GH, 46, { description: branch });
+      assert.equal(result.ok, true);
+      if (result.ok) {
+        assert.equal(result.commentFailed, true);
+      }
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });

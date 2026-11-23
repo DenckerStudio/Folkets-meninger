@@ -24,15 +24,17 @@ import {
   setTaskLabelsBulk,
   taskHasLabel,
 } from '@/lib/admin/local-ai-hub/vikunja-client';
+import type { LocalAiApproveHubNotice } from '@/lib/admin/local-ai-hub/approve-hub-notice';
 import {
   approveSuccessAfterPrReady,
+  hubNoticeAfterRetry,
   markLinkedDraftPrReadyForReview,
 } from '@/lib/admin/local-ai-hub/approve-pr-ready';
 import { shortenUpstreamError } from '@/lib/admin/local-ai-hub/upstream-errors';
 import { routes } from '@/lib/routes';
 
 export type LocalAiActionResult =
-  | { ok: true; warning?: string }
+  | { ok: true; hubNotice?: LocalAiApproveHubNotice }
   | { ok: false; error: string };
 
 function requireLocalAiHubFlag(): LocalAiActionResult | { ok: true } {
@@ -100,7 +102,52 @@ export async function approveLocalAiSuggestionAction(taskId: number): Promise<Lo
   );
 
   revalidatePath(routes.adminOppgaver);
-  return approveSuccessAfterPrReady(prReady);
+  return approveSuccessAfterPrReady(taskId, prReady);
+}
+
+export async function retryMarkLocalAiDraftPrReadyAction(taskId: number): Promise<LocalAiActionResult> {
+  const flag = requireLocalAiHubFlag();
+  if (!flag.ok) return flag;
+
+  const auth = await requireAdmin();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const cfg = await requireConfig();
+  if (!cfg.ok) return cfg;
+
+  const vikunjaOpts = {
+    apiUrl: cfg.config.apiUrl,
+    apiToken: cfg.config.apiToken,
+    projectId: cfg.config.projectId,
+  };
+
+  const tasksRes = await listProjectTasks(vikunjaOpts);
+  if (!tasksRes.ok) return { ok: false, error: tasksRes.error };
+
+  const task = tasksRes.tasks.find((t) => t.id === taskId);
+  if (!task) {
+    return { ok: false, error: 'Oppgaven finnes ikke' };
+  }
+
+  const prReady = await markLinkedDraftPrReadyForReview(
+    {
+      token: cfg.config.githubToken,
+      owner: cfg.config.githubOwner,
+      repo: cfg.config.githubRepo,
+    },
+    taskId,
+    {
+      title: task.title,
+      description: task.description,
+      comments: task.comments,
+    },
+  );
+
+  revalidatePath(routes.adminOppgaver);
+
+  const retry = hubNoticeAfterRetry(taskId, prReady);
+  if (!retry.ok) return retry;
+  return { ok: true, hubNotice: retry.hubNotice };
 }
 
 export async function rejectLocalAiSuggestionAction(taskId: number): Promise<LocalAiActionResult> {

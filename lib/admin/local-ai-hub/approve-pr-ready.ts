@@ -8,17 +8,24 @@ import {
 } from '@/lib/admin/local-ai-hub/github-http';
 import { LOCAL_AI_BRANCH_PREFIX, LOCAL_AI_GITHUB_REPO } from '@/lib/admin/local-ai-hub/labels';
 import { collectTaskTextParts, resolvePrLinkFromTask } from '@/lib/admin/local-ai-hub/pr-link';
+import {
+  buildApproveHubNotice,
+  type LocalAiApproveHubNotice,
+} from '@/lib/admin/local-ai-hub/approve-hub-notice';
+import type {
+  MarkLinkedDraftPrReadyPull,
+  MarkLinkedDraftPrReadyResult,
+} from '@/lib/admin/local-ai-hub/approve-pr-ready-result';
 
-export const APPROVE_PR_READY_WARNING = 'Godkjent, men PR-en kunne ikke settes til ready.';
+export type { MarkLinkedDraftPrReadyPull, MarkLinkedDraftPrReadyResult };
 
 const LOCAL_AI_HEAD_BRANCH_PREFIX = 'lokal-ai/';
 
 type GithubOpts = { token: string; owner: string; repo: string };
 
-export type MarkLinkedDraftPrReadyResult =
-  | { ok: true }
-  | { ok: false; skipped: true }
-  | { ok: false; error: string };
+function pullMeta(pull: GithubPull): MarkLinkedDraftPrReadyPull {
+  return { number: pull.number, url: pull.html_url };
+}
 
 function isTargetRepo(owner: string, repo: string): boolean {
   return owner === LOCAL_AI_GITHUB_REPO.owner && repo === LOCAL_AI_GITHUB_REPO.repo;
@@ -82,28 +89,43 @@ export async function markLinkedDraftPrReadyForReview(
   if (resolved.kind === 'error') return { ok: false, error: resolved.error };
 
   const { pull } = resolved;
+  const meta = pullMeta(pull);
   const nodeId = pull.node_id;
   if (!nodeId) {
     return { ok: false, error: 'Pull request mangler node_id fra GitHub' };
   }
 
   const ready = await markPullRequestReadyForReview(gh, nodeId);
-  if (!ready.ok) return { ok: false, error: ready.error };
+  if (!ready.ok) {
+    return { ok: false, readyFailed: true, pull: meta, error: ready.error };
+  }
 
   const comment = await postIssueComment(gh, pull.number, LOCAL_AI_APPROVE_PR_READY_COMMENT);
-  if (!comment.ok) return { ok: false, error: comment.error };
+  if (!comment.ok) {
+    return { ok: true, pull: meta, commentFailed: true };
+  }
 
-  return { ok: true };
+  return { ok: true, pull: meta };
 }
 
 export function approveSuccessAfterPrReady(
+  taskId: number,
   prReady: MarkLinkedDraftPrReadyResult,
-): { ok: true; warning?: string } {
-  if (prReady.ok || ('skipped' in prReady && prReady.skipped)) {
-    return { ok: true };
+): { ok: true; hubNotice?: LocalAiApproveHubNotice } {
+  const hubNotice = buildApproveHubNotice(taskId, prReady);
+  return hubNotice ? { ok: true, hubNotice } : { ok: true };
+}
+
+export function hubNoticeAfterRetry(
+  taskId: number,
+  prReady: MarkLinkedDraftPrReadyResult,
+): { ok: true; hubNotice: LocalAiApproveHubNotice } | { ok: false; error: string } {
+  if ('skipped' in prReady && prReady.skipped) {
+    return { ok: false, error: 'Ingen draft-PR å sette ready – den kan allerede være klar.' };
   }
-  if ('error' in prReady) {
-    return { ok: true, warning: APPROVE_PR_READY_WARNING };
+  const hubNotice = buildApproveHubNotice(taskId, prReady);
+  if (!hubNotice) {
+    return { ok: false, error: 'Kunne ikke sette PR til ready.' };
   }
-  return { ok: true };
+  return { ok: true, hubNotice };
 }
