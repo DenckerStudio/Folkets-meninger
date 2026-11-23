@@ -80,10 +80,20 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
   const [failedRejectConfirmId, setFailedRejectConfirmId] = useState<number | null>(null);
   const [showInactivePrs, setShowInactivePrs] = useState(false);
   const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
+  const [cardWarnings, setCardWarnings] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
 
   const forgetCardError = (key: string) => {
     setCardErrors((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const forgetCardWarning = (key: string) => {
+    setCardWarnings((prev) => {
       if (!(key in prev)) return prev;
       const next = { ...prev };
       delete next[key];
@@ -148,9 +158,15 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
       setPendingTaskId(null);
       if (!res.ok) {
         setCardErrors((p) => ({ ...p, [`f-${taskId}`]: res.error }));
+        forgetCardWarning(`f-${taskId}`);
         return;
       }
       forgetCardError(`f-${taskId}`);
+      if (res.warning) {
+        setCardWarnings((p) => ({ ...p, [`f-${taskId}`]: res.warning! }));
+      } else {
+        forgetCardWarning(`f-${taskId}`);
+      }
       setRejectConfirmId(null);
       await refresh();
     });
@@ -568,6 +584,11 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
                   {cardErrors[errKey] ? (
                     <p className="mt-2 text-xs text-destructive" role="alert">
                       {cardErrors[errKey]}
+                    </p>
+                  ) : null}
+                  {cardWarnings[errKey] ? (
+                    <p className="mt-2 text-xs text-amber-800 dark:text-amber-200" role="status">
+                      {cardWarnings[errKey]}
                     </p>
                   ) : null}
                   {!confirming ? (

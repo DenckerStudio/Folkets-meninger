@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { computeMergeEligibility } from '@/lib/admin/local-ai-hub/merge-eligibility';
-import type { GithubPull } from '@/lib/admin/local-ai-hub/github-client';
+import type { GithubPull } from '@/lib/admin/local-ai-hub/github-http';
 
 const openPull: GithubPull = {
   number: 1,

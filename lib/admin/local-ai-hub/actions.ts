@@ -24,10 +24,16 @@ import {
   setTaskLabelsBulk,
   taskHasLabel,
 } from '@/lib/admin/local-ai-hub/vikunja-client';
+import {
+  approveSuccessAfterPrReady,
+  markLinkedDraftPrReadyForReview,
+} from '@/lib/admin/local-ai-hub/approve-pr-ready';
 import { shortenUpstreamError } from '@/lib/admin/local-ai-hub/upstream-errors';
 import { routes } from '@/lib/routes';
 
-export type LocalAiActionResult = { ok: true } | { ok: false; error: string };
+export type LocalAiActionResult =
+  | { ok: true; warning?: string }
+  | { ok: false; error: string };
 
 function requireLocalAiHubFlag(): LocalAiActionResult | { ok: true } {
   if (!isAdminLocalAiHubEnabled()) {
@@ -79,8 +85,22 @@ export async function approveLocalAiSuggestionAction(taskId: number): Promise<Lo
   const bulk = await setTaskLabelsBulk(vikunjaOpts, taskId, nextIds);
   if (!bulk.ok) return bulk;
 
+  const prReady = await markLinkedDraftPrReadyForReview(
+    {
+      token: cfg.config.githubToken,
+      owner: cfg.config.githubOwner,
+      repo: cfg.config.githubRepo,
+    },
+    taskId,
+    {
+      title: task.title,
+      description: task.description,
+      comments: task.comments,
+    },
+  );
+
   revalidatePath(routes.adminOppgaver);
-  return { ok: true };
+  return approveSuccessAfterPrReady(prReady);
 }
 
 export async function rejectLocalAiSuggestionAction(taskId: number): Promise<LocalAiActionResult> {
