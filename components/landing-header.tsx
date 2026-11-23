@@ -31,6 +31,8 @@ export function LandingHeader() {
 
   return (
     <header
+      data-site-chrome
+      data-site-chrome-variant="landing"
       className={cn(
         'sticky top-0 z-[70] isolate w-full overflow-x-clip bg-white pt-[env(safe-area-inset-top,0px)]',
         scrolled ? 'shadow-sm backdrop-blur-lg' : '',

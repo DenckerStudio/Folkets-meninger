@@ -115,6 +115,28 @@
        bg-foreground/N backdrops look identical; dark = black so overlays dim
        instead of washing the page out. Use as bg-overlay/<opacity>. */
     --overlay: oklch(0.18 0.02 255);
+
+    /* Site chrome — måles i klient med ResizeObserver; fallbacks matcher h-16-nav (+ flagg/border). */
+    --site-header-nav-height: 4rem;
+    --site-header-flag-stripe-height: 0.375rem;
+    --site-header-border-height: 1px;
+    --site-header-height-fallback-app: calc(
+        env(safe-area-inset-top, 0px) + var(--site-header-nav-height) + var(--site-header-border-height)
+    );
+    --site-header-height-fallback-landing: calc(
+        env(safe-area-inset-top, 0px) + var(--site-header-nav-height) + var(--site-header-flag-stripe-height)
+    );
+    --site-header-height-fallback: var(--site-header-height-fallback-app);
+    --site-header-height: var(--site-header-height-fallback);
+    --sak-page-tabs-sticky-height: 0px;
+}
+
+html[data-site-chrome-variant='landing'] {
+    --site-header-height-fallback: var(--site-header-height-fallback-landing);
+}
+
+html[data-site-chrome-variant='app'] {
+    --site-header-height-fallback: var(--site-header-height-fallback-app);
 }
 
 .dark {
@@ -177,7 +199,24 @@
     }
   html {
     @apply font-sans;
+    scroll-padding-top: var(--site-header-height);
     }
+}
+
+.scroll-mt-site-header {
+  scroll-margin-top: var(--site-header-height);
+}
+
+.scroll-mt-below-sak-tabs {
+  scroll-margin-top: calc(var(--site-header-height) + var(--sak-page-tabs-sticky-height));
+}
+
+.sticky-below-site-header {
+  top: var(--site-header-height);
+}
+
+.sticky-below-sak-page-tabs {
+  top: calc(var(--site-header-height) + var(--sak-page-tabs-sticky-height));
 }
 
 @media (prefers-reduced-motion: reduce) {

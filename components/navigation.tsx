@@ -5,6 +5,7 @@ import { Header } from '@/components/ui/header-3';
 import { LandingFooter } from '@/components/landing-footer';
 import { LandingHeader } from '@/components/landing-header';
 import { DashboardNavProvider } from '@/components/dashboard/dashboard-nav-context';
+import { SiteChromeMetrics } from '@/components/layout/site-chrome-metrics';
 import { isDashboardPath, isEmbedPath, isMarketingPath, isPublicProfilePath } from '@/lib/routes';
 
 type NavigationProps = {
@@ -22,6 +23,7 @@ export function Navigation({ children }: NavigationProps) {
 
   const content = (
     <>
+      <SiteChromeMetrics />
       {isMarketing ? (
         <LandingHeader />
       ) : showAppHeader ? (

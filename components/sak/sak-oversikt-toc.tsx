@@ -89,7 +89,7 @@ export function SakOversiktToc({ entries, variant }: SakOversiktTocProps) {
 
   return (
     <nav
-      className="sticky top-[calc(4rem+5.5rem+env(safe-area-inset-top,0px))] hidden max-h-[calc(100vh-9rem)] overflow-y-auto lg:block"
+      className="sticky-below-sak-page-tabs hidden max-h-[calc(100vh-9rem)] overflow-y-auto lg:block"
       aria-label="Innhold i oversikten"
     >
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">På denne siden</p>
