@@ -1,22 +1,27 @@
 import { requireAdmin } from '@/lib/admin/gate';
 import { prepareAboutSuggestionRefresh } from '@/lib/blog/about-suggestions-assemble';
+import {
+  enrichAboutSuggestionFeedback,
+  reconcileOrphanAboutSuggestions,
+} from '@/lib/blog/about-suggestions-draft-link';
 import { loadAboutSuggestionSources } from '@/lib/blog/about-suggestions-sources';
 import type { AboutSuggestionSourceBundle } from '@/lib/blog/about-suggestions-sources';
 import {
   ABOUT_SUGGESTIONS_TABLE_MISSING_MESSAGE,
   applyAboutSuggestionPlan,
-  feedbackFromStored,
   listAboutSuggestionRows,
+  reopenAboutSuggestion,
   setAboutSuggestionStatus,
 } from '@/lib/blog/about-suggestions-store';
 import type { AboutSuggestionStored } from '@/lib/blog/about-suggestions-store';
 import { aboutSuggestionSourceLabel, type AboutSuggestion } from '@/lib/blog/about-suggestions';
+import { cmsBlogOpsLookup } from '@/lib/cms/blog-ops-client';
 import { getSearxngBaseUrl } from '@/lib/chat/searxng';
 
 export { ABOUT_SUGGESTIONS_TABLE_MISSING_MESSAGE };
 
 const SUGGESTION_KEY = /^[a-z0-9:_-]{3,160}$/;
-const FEEDBACK_ACTIONS = ['use', 'dismiss', 'snooze'] as const;
+const FEEDBACK_ACTIONS = ['dismiss', 'snooze'] as const;
 type FeedbackAction = (typeof FEEDBACK_ACTIONS)[number];
 
 export type AboutSuggestionsApiResponse = {
@@ -31,6 +36,8 @@ export type AboutSuggestionsApiDeps = {
   applyPlan: typeof applyAboutSuggestionPlan;
   setStatus: typeof setAboutSuggestionStatus;
   prepare: typeof prepareAboutSuggestionRefresh;
+  lookupPost: typeof cmsBlogOpsLookup;
+  reopenOrphan: typeof reopenAboutSuggestion;
   searxngConfigured: () => boolean;
   now: () => Date;
 };
@@ -42,6 +49,8 @@ export const aboutSuggestionsApiDeps: AboutSuggestionsApiDeps = {
   applyPlan: applyAboutSuggestionPlan,
   setStatus: setAboutSuggestionStatus,
   prepare: prepareAboutSuggestionRefresh,
+  lookupPost: cmsBlogOpsLookup,
+  reopenOrphan: reopenAboutSuggestion,
   searxngConfigured: () => getSearxngBaseUrl() !== null,
   now: () => new Date(),
 };
@@ -83,10 +92,8 @@ function storeErrorBody(result: { missing: boolean; message: string }): Record<s
   };
 }
 
-function statusForAction(action: FeedbackAction): 'used' | 'dismissed' | 'snoozed' {
+function statusForAction(action: FeedbackAction): 'dismissed' | 'snoozed' {
   switch (action) {
-    case 'use':
-      return 'used';
     case 'dismiss':
       return 'dismissed';
     case 'snooze':
@@ -96,6 +103,20 @@ function statusForAction(action: FeedbackAction): 'used' | 'dismissed' | 'snooze
       return unhandled;
     }
   }
+}
+
+async function activeOpenSuggestions(
+  rows: AboutSuggestionStored[],
+  deps: AboutSuggestionsApiDeps,
+): Promise<AboutSuggestion[]> {
+  const reconciled = await reconcileOrphanAboutSuggestions({
+    rows,
+    lookupPost: deps.lookupPost,
+    reopen: deps.reopenOrphan,
+  });
+  return reconciled
+    .filter((row) => row.status === 'open')
+    .map(storedToSuggestion);
 }
 
 function searxngNote(configured: boolean): string[] {
@@ -112,7 +133,7 @@ export async function handleAboutSuggestionsList(
   const listed = await deps.listRows();
   if (!listed.ok) return { status: listed.status, body: storeErrorBody(listed) };
 
-  const open = listed.rows.filter((row) => row.status === 'open').map(storedToSuggestion);
+  const open = await activeOpenSuggestions(listed.rows, deps);
   return {
     status: 200,
     body: {
@@ -144,6 +165,15 @@ export async function handleAboutSuggestionsRefresh(
     };
   }
 
+  const reconciled = await reconcileOrphanAboutSuggestions({
+    rows: listed.rows,
+    lookupPost: deps.lookupPost,
+    reopen: deps.reopenOrphan,
+  });
+  const existing = await enrichAboutSuggestionFeedback({
+    rows: reconciled,
+    lookupPost: deps.lookupPost,
+  });
   const prepared = deps.prepare({
     input: {
       written: sources.written,
@@ -152,7 +182,7 @@ export async function handleAboutSuggestionsRefresh(
       research: sources.research,
       webHits: sources.webHits,
     },
-    existing: feedbackFromStored(listed.rows),
+    existing,
     now: deps.now(),
   });
   const saved = await deps.applyPlan(prepared.plan);
@@ -199,6 +229,17 @@ export async function handleAboutSuggestionsPost(
 
   if (json && typeof json === 'object' && (json as { action?: unknown }).action === 'refresh') {
     return handleAboutSuggestionsRefresh(deps);
+  }
+
+  if (json && typeof json === 'object' && (json as { action?: unknown }).action === 'use') {
+    const key =
+      typeof (json as { suggestion_key?: unknown }).suggestion_key === 'string'
+        ? (json as { suggestion_key: string }).suggestion_key.trim()
+        : '';
+    if (!SUGGESTION_KEY.test(key)) {
+      return { status: 400, body: { error: 'invalid_input', message: 'Ugyldig forslagsnøkkel' } };
+    }
+    return { status: 200, body: { ok: true, suggestion_key: key, action: 'use' } };
   }
 
   const parsed = parseFeedback(json);

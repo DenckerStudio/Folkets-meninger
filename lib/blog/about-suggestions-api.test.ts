@@ -24,8 +24,17 @@ const suggestion: AboutSuggestion = {
   evergreen: false,
 };
 
-function stored(status: AboutSuggestionStored['status'] = 'open'): AboutSuggestionStored {
-  return { ...suggestion, status, snoozeUntil: null };
+function stored(
+  status: AboutSuggestionStored['status'] = 'open',
+  extra: Partial<Pick<AboutSuggestionStored, 'draftRequestId' | 'sourceEvent'>> = {},
+): AboutSuggestionStored {
+  return {
+    ...suggestion,
+    status,
+    snoozeUntil: null,
+    draftRequestId: extra.draftRequestId ?? null,
+    sourceEvent: extra.sourceEvent ?? null,
+  };
 }
 
 function sources(): AboutSuggestionSourceBundle {
@@ -44,9 +53,23 @@ function sources(): AboutSuggestionSourceBundle {
 
 function makeDeps(overrides: Partial<AboutSuggestionsApiDeps> = {}): {
   deps: AboutSuggestionsApiDeps;
-  calls: { lists: number; loads: number; plans: number; statuses: string[] };
+  calls: {
+    lists: number;
+    loads: number;
+    plans: number;
+    statuses: string[];
+    lookups: number;
+    reopens: string[];
+  };
 } {
-  const calls = { lists: 0, loads: 0, plans: 0, statuses: [] as string[] };
+  const calls = {
+    lists: 0,
+    loads: 0,
+    plans: 0,
+    statuses: [] as string[],
+    lookups: 0,
+    reopens: [] as string[],
+  };
   const deps: AboutSuggestionsApiDeps = {
     requireAdmin: async () => ({ ok: true, userId: 'admin-1' }),
     listRows: async () => {
@@ -69,6 +92,14 @@ function makeDeps(overrides: Partial<AboutSuggestionsApiDeps> = {}): {
       visible: [suggestion],
       plan: { insert: [suggestion], update: [], deleteKeys: [] },
     }),
+    lookupPost: async () => {
+      calls.lookups += 1;
+      return { found: false };
+    },
+    reopenOrphan: async (key) => {
+      calls.reopens.push(key);
+      return { ok: true };
+    },
     searxngConfigured: () => false,
     now: () => new Date('2026-11-21T12:00:00.000Z'),
     ...overrides,
@@ -103,7 +134,7 @@ async function testGate() {
       deps,
     );
     assert.equal(dismissed.status, denied.status);
-    assert.deepEqual(calls, { lists: 0, loads: 0, plans: 0, statuses: [] });
+    assert.deepEqual(calls, { lists: 0, loads: 0, plans: 0, statuses: [], lookups: 0, reopens: [] });
   }
 
   const route = readFileSync(join(process.cwd(), 'app/api/admin/blog/suggestions/route.ts'), 'utf8');
@@ -155,24 +186,38 @@ async function testRefreshAndFeedback() {
     deps,
   );
   assert.equal(used.status, 200);
-  assert.deepEqual(calls.statuses, ['used']);
+  assert.deepEqual(calls.statuses, []);
 
   const snoozed = await handleAboutSuggestionsPost(
     post({ action: 'snooze', suggestion_key: suggestion.key }),
     deps,
   );
   assert.equal(snoozed.status, 200);
-  assert.deepEqual(calls.statuses, ['used', 'snoozed']);
+  assert.deepEqual(calls.statuses, ['snoozed']);
 
   const bad = await handleAboutSuggestionsPost(post({ action: 'dismiss', suggestion_key: 'X' }), deps);
   assert.equal(bad.status, 400);
   assert.equal(bad.body.error, 'invalid_input');
 }
 
+async function testOrphanUsedShowsAgain() {
+  const orphan = stored('used');
+  const { deps, calls } = makeDeps({
+    listRows: async () => ({ ok: true, rows: [orphan] }),
+    lookupPost: async () => ({ found: false }),
+  });
+  const listed = await handleAboutSuggestionsList(deps);
+  assert.equal(listed.status, 200);
+  const rows = listed.body.suggestions as Array<{ key: string }>;
+  assert.equal(rows[0]?.key, suggestion.key);
+  assert.deepEqual(calls.reopens, [suggestion.key]);
+}
+
 async function testRun() {
   await testGate();
   await testListAndMissingTable();
   await testRefreshAndFeedback();
+  await testOrphanUsedShowsAgain();
   console.log('lib/blog/about-suggestions-api.test.ts ok');
 }
 

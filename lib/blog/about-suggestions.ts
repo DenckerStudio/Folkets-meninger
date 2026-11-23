@@ -445,10 +445,19 @@ export type AboutSuggestionFeedback = {
   title: string;
   status: AboutSuggestionStatus;
   snoozeUntil: string | null;
+  /** When status is `used`, false means the suggestion failed before a draft was saved. */
+  usedHasDraft?: boolean;
 };
 
+export function suggestionUsageConsumesTitle(row: AboutSuggestionFeedback): boolean {
+  if (row.status === 'dismissed') return true;
+  if (row.status === 'used') return row.usedHasDraft !== false;
+  return false;
+}
+
 export function suggestionFeedbackIsActive(row: AboutSuggestionFeedback, now: Date): boolean {
-  if (row.status === 'dismissed' || row.status === 'used') return true;
+  if (row.status === 'dismissed') return true;
+  if (row.status === 'used') return row.usedHasDraft !== false;
   if (row.status === 'snoozed') {
     if (!row.snoozeUntil) return true;
     const until = Date.parse(row.snoozeUntil);
@@ -471,7 +480,7 @@ export function visibleAboutSuggestions(args: {
     args.feedback.filter((row) => suggestionFeedbackIsActive(row, now)).map((row) => row.key),
   );
   const blockedTitles: AboutWrittenPiece[] = args.feedback
-    .filter((row) => row.status === 'dismissed' || row.status === 'used')
+    .filter((row) => suggestionUsageConsumesTitle(row))
     .map((row) => ({ title: row.title, kind: 'publisert', at: null }));
 
   const keptLive = args.live.filter(
@@ -498,7 +507,7 @@ export function planAboutSuggestionWrites(args: {
   now: Date;
 }): AboutSuggestionWritePlan {
   const blockedTitles: AboutWrittenPiece[] = args.existing
-    .filter((row) => row.status === 'dismissed' || row.status === 'used')
+    .filter((row) => suggestionUsageConsumesTitle(row))
     .map((row) => ({ title: row.title, kind: 'publisert', at: null }));
   const existingByKey = new Map(args.existing.map((row) => [row.key, row]));
   const insert: AboutSuggestion[] = [];
@@ -513,7 +522,8 @@ export function planAboutSuggestionWrites(args: {
       insert.push(item);
       continue;
     }
-    if (current.status === 'dismissed' || current.status === 'used') continue;
+    if (current.status === 'dismissed') continue;
+    if (current.status === 'used' && current.usedHasDraft !== false) continue;
     if (suggestionFeedbackIsActive(current, args.now)) continue;
     update.push(item);
   }

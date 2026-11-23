@@ -6,6 +6,12 @@ import { ExternalLink, Loader2 } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import { CharacterCountTextarea } from '@/components/ui/character-count-textarea';
 import { Input } from '@/components/ui/input';
+import {
+  ABOUT_BLOG_TITLE_INPUT_ID,
+  focusAboutBlogTitleField,
+  formatAboutBlogSuggestionDraftFailure,
+  type AboutBlogDraftFormFields,
+} from '@/lib/admin/about-blog-panels';
 import { adminVurderHref } from '@/lib/admin/vurder-tabs';
 import { formatBlogDate } from '@/lib/blog/format';
 import { cn } from '@/lib/utils';
@@ -39,6 +45,10 @@ export type AboutBlogDraftPanelProps = {
   angleMax: number;
   publicCategoryHref: string;
   appliedSuggestion?: AppliedAboutSuggestion | null;
+  onFormFieldsChange?: (fields: AboutBlogDraftFormFields) => void;
+  onDraftCreated?: (suggestionKey: string) => void;
+  onSuggestionDraftFailed?: (suggestionKey: string) => void;
+  onUserEditedForm?: () => void;
 };
 
 function toDraft(row: DraftJson): AboutDraft | null {
@@ -65,6 +75,10 @@ export function AboutBlogDraftPanel({
   angleMax,
   publicCategoryHref,
   appliedSuggestion = null,
+  onFormFieldsChange,
+  onDraftCreated,
+  onSuggestionDraftFailed,
+  onUserEditedForm,
 }: AboutBlogDraftPanelProps) {
   const [title, setTitle] = useState('');
   const [angle, setAngle] = useState('');
@@ -111,6 +125,10 @@ export function AboutBlogDraftPanel({
   }, [refreshDrafts]);
 
   useEffect(() => {
+    onFormFieldsChange?.({ title, angle });
+  }, [title, angle, onFormFieldsChange]);
+
+  useEffect(() => {
     if (!appliedSuggestion || appliedSuggestion.token === appliedTokenRef.current) return;
     appliedTokenRef.current = appliedSuggestion.token;
     setTitle(appliedSuggestion.title);
@@ -119,6 +137,8 @@ export function AboutBlogDraftPanel({
     requestIdRef.current = null;
     setError('');
     setCreated(null);
+    const frame = requestAnimationFrame(() => focusAboutBlogTitleField(document));
+    return () => cancelAnimationFrame(frame);
   }, [appliedSuggestion]);
 
   const trimmedTitle = title.trim();
@@ -130,6 +150,8 @@ export function AboutBlogDraftPanel({
     if (!canSubmit || inFlightRef.current) return;
     inFlightRef.current = true;
     requestIdRef.current ??= crypto.randomUUID();
+    const activeSuggestionKey = suggestionKeyRef.current;
+    const fromSuggestion = Boolean(activeSuggestionKey);
     setError('');
     setCreated(null);
     setPending(true);
@@ -147,12 +169,20 @@ export function AboutBlogDraftPanel({
       const body = (await res.json().catch(() => ({}))) as DraftJson & { message?: string };
       const draft = res.ok ? toDraft(body) : null;
       if (!draft) {
+        if (fromSuggestion && activeSuggestionKey) {
+          onSuggestionDraftFailed?.(activeSuggestionKey);
+        }
         setError(
-          typeof body.message === 'string' && body.message.trim()
-            ? body.message
-            : 'Kunne ikke lage utkast. Prøv igjen.',
+          fromSuggestion
+            ? formatAboutBlogSuggestionDraftFailure(body.message)
+            : typeof body.message === 'string' && body.message.trim()
+              ? body.message
+              : 'Kunne ikke lage utkast. Prøv igjen.',
         );
         return;
+      }
+      if (activeSuggestionKey) {
+        onDraftCreated?.(activeSuggestionKey);
       }
       requestIdRef.current = null;
       suggestionKeyRef.current = null;
@@ -161,7 +191,14 @@ export function AboutBlogDraftPanel({
       setAngle('');
       await refreshDrafts();
     } catch {
-      setError('Kunne ikke lage utkast. Prøv igjen.');
+      if (activeSuggestionKey) {
+        onSuggestionDraftFailed?.(activeSuggestionKey);
+      }
+      setError(
+        activeSuggestionKey
+          ? formatAboutBlogSuggestionDraftFailure(null)
+          : 'Kunne ikke lage utkast. Prøv igjen.',
+      );
     } finally {
       inFlightRef.current = false;
       setPending(false);
@@ -200,9 +237,10 @@ export function AboutBlogDraftPanel({
               Tittel
             </label>
             <Input
-              id="about-blog-title"
+              id={ABOUT_BLOG_TITLE_INPUT_ID}
               value={title}
               onChange={(event) => {
+                onUserEditedForm?.();
                 setTitle(event.target.value);
                 requestIdRef.current = null;
               }}
@@ -228,6 +266,7 @@ export function AboutBlogDraftPanel({
               id="about-blog-angle"
               value={angle}
               onChange={(value) => {
+                onUserEditedForm?.();
                 setAngle(value);
                 requestIdRef.current = null;
               }}

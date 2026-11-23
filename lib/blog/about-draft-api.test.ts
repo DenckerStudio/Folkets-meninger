@@ -275,6 +275,16 @@ async function testErrors() {
   assert.equal(rejected.status, 400);
   assert.equal(rejected.body.error, 'cms_error');
   assert.equal(rejected.body.message, 'Ukjent kategori');
+
+  const withSuggestion = makeDeps({
+    createDraft: async () => ({ ok: false, status: 502, error: 'CMS nede' }),
+  });
+  const failedSuggestion = await handleAboutDraftCreate(
+    post({ title: 'Om oss', suggestion_key: 'dekning:faq:representativitet', request_id: REQUEST_ID }),
+    withSuggestion.deps,
+  );
+  assert.equal(failedSuggestion.status, 502);
+  assert.deepEqual(withSuggestion.calls.links, []);
 }
 
 void (async () => {
