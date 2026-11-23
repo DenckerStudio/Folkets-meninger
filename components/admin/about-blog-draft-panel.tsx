@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import {
   ABOUT_BLOG_TITLE_INPUT_ID,
   focusAboutBlogTitleField,
+  formatAboutBlogSuggestionDraftFailure,
   type AboutBlogDraftFormFields,
 } from '@/lib/admin/about-blog-panels';
 import { adminVurderHref } from '@/lib/admin/vurder-tabs';
@@ -45,6 +46,9 @@ export type AboutBlogDraftPanelProps = {
   publicCategoryHref: string;
   appliedSuggestion?: AppliedAboutSuggestion | null;
   onFormFieldsChange?: (fields: AboutBlogDraftFormFields) => void;
+  onDraftCreated?: (suggestionKey: string) => void;
+  onSuggestionDraftFailed?: (suggestionKey: string) => void;
+  onUserEditedForm?: () => void;
 };
 
 function toDraft(row: DraftJson): AboutDraft | null {
@@ -72,6 +76,9 @@ export function AboutBlogDraftPanel({
   publicCategoryHref,
   appliedSuggestion = null,
   onFormFieldsChange,
+  onDraftCreated,
+  onSuggestionDraftFailed,
+  onUserEditedForm,
 }: AboutBlogDraftPanelProps) {
   const [title, setTitle] = useState('');
   const [angle, setAngle] = useState('');
@@ -143,7 +150,8 @@ export function AboutBlogDraftPanel({
     if (!canSubmit || inFlightRef.current) return;
     inFlightRef.current = true;
     requestIdRef.current ??= crypto.randomUUID();
-    const fromSuggestion = Boolean(suggestionKeyRef.current);
+    const activeSuggestionKey = suggestionKeyRef.current;
+    const fromSuggestion = Boolean(activeSuggestionKey);
     setError('');
     setCreated(null);
     setPending(true);
@@ -161,14 +169,20 @@ export function AboutBlogDraftPanel({
       const body = (await res.json().catch(() => ({}))) as DraftJson & { message?: string };
       const draft = res.ok ? toDraft(body) : null;
       if (!draft) {
+        if (fromSuggestion && activeSuggestionKey) {
+          onSuggestionDraftFailed?.(activeSuggestionKey);
+        }
         setError(
           fromSuggestion
-            ? 'Utkastet feilet. Forslaget kan brukes på nytt.'
+            ? formatAboutBlogSuggestionDraftFailure(body.message)
             : typeof body.message === 'string' && body.message.trim()
               ? body.message
               : 'Kunne ikke lage utkast. Prøv igjen.',
         );
         return;
+      }
+      if (activeSuggestionKey) {
+        onDraftCreated?.(activeSuggestionKey);
       }
       requestIdRef.current = null;
       suggestionKeyRef.current = null;
@@ -177,9 +191,12 @@ export function AboutBlogDraftPanel({
       setAngle('');
       await refreshDrafts();
     } catch {
+      if (activeSuggestionKey) {
+        onSuggestionDraftFailed?.(activeSuggestionKey);
+      }
       setError(
-        suggestionKeyRef.current
-          ? 'Utkastet feilet. Forslaget kan brukes på nytt.'
+        activeSuggestionKey
+          ? formatAboutBlogSuggestionDraftFailure(null)
           : 'Kunne ikke lage utkast. Prøv igjen.',
       );
     } finally {
@@ -223,6 +240,7 @@ export function AboutBlogDraftPanel({
               id={ABOUT_BLOG_TITLE_INPUT_ID}
               value={title}
               onChange={(event) => {
+                onUserEditedForm?.();
                 setTitle(event.target.value);
                 requestIdRef.current = null;
               }}
@@ -248,6 +266,7 @@ export function AboutBlogDraftPanel({
               id="about-blog-angle"
               value={angle}
               onChange={(value) => {
+                onUserEditedForm?.();
                 setAngle(value);
                 requestIdRef.current = null;
               }}

@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
-import { shouldShowAboutSuggestionsEmptyState } from '@/lib/admin/about-blog-panels';
+import {
+  ABOUT_BLOG_SUGGESTION_CONSUMED_MESSAGE,
+  ABOUT_BLOG_SUGGESTION_PICKED_MESSAGE,
+  shouldShowAboutSuggestionsEmptyState,
+} from '@/lib/admin/about-blog-panels';
 import { cn } from '@/lib/utils';
 
 export type AboutSuggestionChoice = {
@@ -57,10 +61,21 @@ function notesFrom(body: SuggestionsPayload): string[] {
   return body.notes.filter((note): note is string => typeof note === 'string' && note.trim().length > 0);
 }
 
+export type AboutSuggestionDraftOutcome = {
+  suggestionKey: string;
+  ok: boolean;
+};
+
 export function AboutBlogSuggestionsPanel({
   onUse,
+  draftOutcome = null,
+  onDraftOutcomeHandled,
+  clearUsedMessageSignal = 0,
 }: {
   onUse: (suggestion: AboutSuggestionChoice) => void;
+  draftOutcome?: AboutSuggestionDraftOutcome | null;
+  onDraftOutcomeHandled?: () => void;
+  clearUsedMessageSignal?: number;
 }) {
   const [suggestions, setSuggestions] = useState<SuggestionCard[]>([]);
   const [notes, setNotes] = useState<string[]>([]);
@@ -116,6 +131,23 @@ export function AboutBlogSuggestionsPanel({
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!draftOutcome) return;
+    if (draftOutcome.ok) {
+      setSuggestions((current) => current.filter((row) => row.key !== draftOutcome.suggestionKey));
+      setUsedMessage(ABOUT_BLOG_SUGGESTION_CONSUMED_MESSAGE);
+      void load();
+    } else {
+      setUsedMessage('');
+    }
+    onDraftOutcomeHandled?.();
+  }, [draftOutcome, load, onDraftOutcomeHandled]);
+
+  useEffect(() => {
+    if (clearUsedMessageSignal === 0) return;
+    setUsedMessage('');
+  }, [clearUsedMessageSignal]);
+
   const refresh = async () => {
     if (refreshing || pendingKey) return;
     setRefreshing(true);
@@ -148,7 +180,7 @@ export function AboutBlogSuggestionsPanel({
   const pick = (item: SuggestionCard) => {
     if (busy) return;
     onUse({ key: item.key, title: item.title, angle: item.angle });
-    setUsedMessage('Tittel og vinkling er fylt inn i skjemaet under. Forslaget forsvinner først når utkastet er lagret.');
+    setUsedMessage(ABOUT_BLOG_SUGGESTION_PICKED_MESSAGE);
     setError('');
   };
 
