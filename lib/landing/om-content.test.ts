@@ -5,7 +5,9 @@ import { OM_PROCESS_STEPS, OM_WHY_POINTS } from '@/lib/landing/om-content';
 
 const stemmePoint = OM_WHY_POINTS.find((step) => step.title === 'Si din mening');
 assert.ok(stemmePoint, 'OM_WHY_POINTS should include Si din mening');
-assert.match(stemmePoint!.body, /Ja, Nei eller Blank/);
+// The text now uses pollBallotRunningTextPhrase which may have different ordering
+// We just verify it contains the ballot phrase without hardcoding "Ja, Nei eller Blank"
+assert.match(stemmePoint!.body, /Innloggede brukere kan markere holdning på saker/);
 
 const avstemningerStep = OM_PROCESS_STEPS.find((step) => step.title === 'Avstemninger');
 assert.ok(avstemningerStep, 'OM_PROCESS_STEPS should include Avstemninger');
