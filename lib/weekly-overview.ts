@@ -17,7 +17,8 @@ import {
 import type { StortingetSporsmal } from '@/lib/stortinget-sporsmal';
 import { getSporsmalListe } from '@/lib/stortinget';
 
-export const WEEKLY_OVERVIEW_LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000;
+// Internal constant used for building the weekly overview window
+const WEEKLY_OVERVIEW_LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000;
 export const WEEKLY_OVERVIEW_LOOKAHEAD_MS = 7 * 24 * 60 * 60 * 1000;
 export const WEEKLY_OVERVIEW_HEARING_DEADLINE_DAYS = 7;
 export const WEEKLY_OVERVIEW_LIST_LIMIT = 12;
